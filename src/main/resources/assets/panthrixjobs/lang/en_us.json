@@ -43,5 +43,9 @@
   "item.panthrixjobs.farmer_helmet": "Sombrero de paja de granjero",
   "item.panthrixjobs.farmer_chestplate": "Camisa de cuadros de granjero",
   "item.panthrixjobs.farmer_leggings": "Peto vaquero de granjero",
-  "item.panthrixjobs.farmer_boots": "Botas de agua de granjero"
+  "item.panthrixjobs.farmer_boots": "Botas de agua de granjero",
+  "item.panthrixjobs.sailor_helmet": "Gorro de marinero",
+  "item.panthrixjobs.sailor_chestplate": "Blusa de marinero",
+  "item.panthrixjobs.sailor_leggings": "Pantalón de marinero",
+  "item.panthrixjobs.sailor_boots": "Zapatos de marinero"
 }

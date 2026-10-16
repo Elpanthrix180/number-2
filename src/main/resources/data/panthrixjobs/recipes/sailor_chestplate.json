@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "W W",
+    "BKB",
+    "WWW"
+  ],
+  "key": {
+    "W": {
+      "item": "minecraft:white_wool"
+    },
+    "B": {
+      "item": "minecraft:blue_wool"
+    },
+    "K": {
+      "item": "minecraft:black_wool"
+    }
+  },
+  "result": {
+    "item": "panthrixjobs:sailor_chestplate",
+    "count": 1
+  }
+}

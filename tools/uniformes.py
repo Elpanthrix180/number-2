@@ -78,6 +78,13 @@ def draw_head(img, s):
                 rect(img, fx + i, 8, 1, 2, c if i % 2 == 0 else tone(c, 0.88))
             rect(img, fx, 10, 8, 1, acc)            # cinta
             rect(img, fx, 11, 8, 1, tone(c, 0.75))  # ala
+    elif kind == "sailor":                  # gorro de marinero con el borde doblado
+        for fx in HEAD_FACES:
+            rect(img, fx, 8, 8, 1, c)
+            rect(img, fx, 9, 8, 2, tone(c, 1.0))
+            rect(img, fx, 9, 8, 1, tone(c, 0.85))
+            rect(img, fx, 11, 8, 1, tone(c, 0.92))
+        rect(img, 10, 10, 4, 1, acc)            # cinta frontal
     elif kind == "chef":                    # gorro alto de cocinero (pliegues)
         rect(img, 8, 0, 8, 8, c)
         for i in range(1, 7, 2):
@@ -110,6 +117,20 @@ def draw_body(img, s):
             rect(img, x, 20, 1, 12, st)
         img.putpixel((21, 23), (220, 200, 90, 255))
         img.putpixel((26, 23), (220, 200, 90, 255))
+    if "sailor_collar" in f:                # cuello de marinero
+        n, w = rgba(s["collar_color"]), (240, 240, 244, 255)
+        for i in range(4):                      # pico delante
+            rect(img, 20 + i, 20 + i, 1, 1, n)
+            rect(img, 27 - i, 20 + i, 1, 1, n)
+            if i < 3:
+                img.putpixel((21 + i, 20 + i), w)
+                img.putpixel((26 - i, 20 + i), w)
+        rect(img, 23, 23, 2, 2, rgba(s["neckerchief"]))   # nudo del panuelo
+        rect(img, 23, 25, 2, 1, tone(rgba(s["neckerchief"]), 0.8))
+        rect(img, 32, 20, 8, 5, n)              # cuadrado de la espalda
+        rect(img, 33, 23, 6, 1, w)
+        rect(img, 16, 20, 4, 1, n)
+        rect(img, 28, 20, 4, 1, n)
     if "vest" in f:                         # chaleco sobre camisa
         v = rgba(s["vest"])
         for x, w in BODY_FACES:
@@ -274,6 +295,11 @@ HEAD_ICONS = {
         ".....onnnnno....", "....onlnlnnno...", "....onnnnnnno...", "....oaaaaaaao...",
         ".oooonnnnnnnoooo", "onnnnlnnnnlnnnno", ".odddddddddddddo", "..oooooooooooo..",
         "................", "................", "................", "................"],
+    "sailor": [
+        "................", "................", "................", "................",
+        "....oooooooo....", "...onnnnnnnno...", "...onnnnnnnno...", "...olnnnnnnlo...",
+        "..odddddddddddo.", "..olllaaaallllo.", "..oddddddddddo..", "...oooooooooo...",
+        "................", "................", "................", "................"],
     "chef": [
         "...oooo..oooo...", "..ollnnoolnnno..", ".olnnnnnnnnnnno.", ".onnnnnnnnnnnno.",
         ".odnnnnnnnnnndo.", "..oddnnnnnnddo..", "...ondndndndo...", "...ondndndndo...",
@@ -382,6 +408,13 @@ JOBS = {
         features=("plaid", "straps", "rolled"),
         pants=(52, 86, 150), pant_features=("bib", "knee"),
         boots=(64, 110, 52), toe=(90, 140, 72)),
+    "sailor": dict(
+        head="sailor", head_color=(242, 242, 246), head_accent=(30, 44, 96),
+        chest=(242, 242, 246), collar_color=(30, 44, 96), neckerchief=(20, 20, 26),
+        tie=(30, 44, 96), accent=(30, 44, 96),
+        features=("sailor_collar",), cuff=(30, 44, 96),
+        pants=(236, 236, 242), pant_features=("side_stripe",), pant_accent=(30, 44, 96),
+        boots=(20, 20, 24)),
     "chef": dict(
         head="chef", head_color=(244, 244, 248), head_accent=(214, 218, 226),
         chest=(244, 244, 248), accent=(30, 30, 34),

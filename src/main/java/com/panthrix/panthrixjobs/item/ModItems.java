@@ -81,6 +81,12 @@ public class ModItems {
     public static final RegistryObject<Item> FARMER_LEGGINGS = armor("farmer_leggings", ModArmorMaterials.FARMER, ArmorItem.Type.LEGGINGS);
     public static final RegistryObject<Item> FARMER_BOOTS = armor("farmer_boots", ModArmorMaterials.FARMER, ArmorItem.Type.BOOTS);
 
+    // ---- Marinero ----
+    public static final RegistryObject<Item> SAILOR_HELMET = armor("sailor_helmet", ModArmorMaterials.SAILOR, ArmorItem.Type.HELMET);
+    public static final RegistryObject<Item> SAILOR_CHESTPLATE = armor("sailor_chestplate", ModArmorMaterials.SAILOR, ArmorItem.Type.CHESTPLATE);
+    public static final RegistryObject<Item> SAILOR_LEGGINGS = armor("sailor_leggings", ModArmorMaterials.SAILOR, ArmorItem.Type.LEGGINGS);
+    public static final RegistryObject<Item> SAILOR_BOOTS = armor("sailor_boots", ModArmorMaterials.SAILOR, ArmorItem.Type.BOOTS);
+
     private static RegistryObject<Item> armor(String id, ModArmorMaterials material, ArmorItem.Type type) {
         return ITEMS.register(id, () -> new ArmorItem(material, type, new Item.Properties()));
     }
