@@ -70,6 +70,14 @@ def draw_head(img, s):
         rect(img, 27, 10, 2, 2, tone(c, 0.7))   # lazo atras
         for x in (10, 13):
             img.putpixel((x, 9), acc)
+    elif kind == "straw":                   # sombrero de paja con cinta
+        for i in range(0, 8, 2):
+            rect(img, 8 + i, 0, 1, 8, tone(c, 0.88))
+        for fx in HEAD_FACES:
+            for i in range(8):
+                rect(img, fx + i, 8, 1, 2, c if i % 2 == 0 else tone(c, 0.88))
+            rect(img, fx, 10, 8, 1, acc)            # cinta
+            rect(img, fx, 11, 8, 1, tone(c, 0.75))  # ala
     elif kind == "chef":                    # gorro alto de cocinero (pliegues)
         rect(img, 8, 0, 8, 8, c)
         for i in range(1, 7, 2):
@@ -87,6 +95,21 @@ def draw_body(img, s):
     box(img, 40, 16, 4, 12, 4, rgba(s.get("sleeve", s["chest"])))
     f = set(s.get("features", ()))
     acc = rgba(s.get("accent", (230, 190, 60)))
+    if "plaid" in f:                        # camisa de cuadros
+        p2 = rgba(s["plaid"])
+        for x0, w in BODY_FACES + tuple((x, 4) for x in ARM_FACES):
+            for x in range(x0, x0 + w):
+                for y in range(20, 32):
+                    if x % 4 == 0 and y % 4 == 0:
+                        img.putpixel((x, y), p2)
+                    elif x % 4 == 0 or y % 4 == 0:
+                        img.putpixel((x, y), tone(rgba(s["chest"]), 0.6))
+    if "straps" in f:                       # tirantes del peto
+        st = rgba(s["straps"])
+        for x in (21, 26, 33, 38):
+            rect(img, x, 20, 1, 12, st)
+        img.putpixel((21, 23), (220, 200, 90, 255))
+        img.putpixel((26, 23), (220, 200, 90, 255))
     if "vest" in f:                         # chaleco sobre camisa
         v = rgba(s["vest"])
         for x, w in BODY_FACES:
@@ -246,6 +269,11 @@ HEAD_ICONS = {
         "....oooooooo....", "...olllllllno...", "..olnnnnnnnnno..", "..onnannannnno..",
         "..onnnnnnnnnno..", "..oddddddddddo..", "..oooooooooodo..", "............oo..",
         "................", "................", "................", "................"],
+    "straw": [
+        "................", "................", "................", "......oooo......",
+        ".....onnnnno....", "....onlnlnnno...", "....onnnnnnno...", "....oaaaaaaao...",
+        ".oooonnnnnnnoooo", "onnnnlnnnnlnnnno", ".odddddddddddddo", "..oooooooooooo..",
+        "................", "................", "................", "................"],
     "chef": [
         "...oooo..oooo...", "..ollnnoolnnno..", ".olnnnnnnnnnnno.", ".onnnnnnnnnnnno.",
         ".odnnnnnnnnnndo.", "..oddnnnnnnddo..", "...ondndndndo...", "...ondndndndo...",
@@ -348,6 +376,12 @@ JOBS = {
         features=("collar", "buttons", "bag"), cuff=(36, 70, 140),
         pants=(36, 70, 140), pant_features=("bag", "side_stripe"), pant_accent=(242, 196, 40),
         boots=(26, 26, 30)),
+    "farmer": dict(
+        head="straw", head_color=(222, 190, 100), head_accent=(170, 40, 40),
+        chest=(178, 40, 40), plaid=(236, 230, 220), straps=(52, 86, 150), accent=(220, 200, 90),
+        features=("plaid", "straps", "rolled"),
+        pants=(52, 86, 150), pant_features=("bib", "knee"),
+        boots=(64, 110, 52), toe=(90, 140, 72)),
     "chef": dict(
         head="chef", head_color=(244, 244, 248), head_accent=(214, 218, 226),
         chest=(244, 244, 248), accent=(30, 30, 34),

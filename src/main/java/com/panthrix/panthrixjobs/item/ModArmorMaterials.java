@@ -26,7 +26,8 @@ public enum ModArmorMaterials implements ArmorMaterial {
     TRAIN_DRIVER("train_driver", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
     MECHANIC("mechanic", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
     MAIL_CARRIER("mail_carrier", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
-    CHEF("chef", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER));
+    CHEF("chef", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
+    FARMER("farmer", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER));
 
     // Durabilidad base por pieza (botas, pantalon, pecho, cabeza), igual que el cuero de Minecraft.
     private static final int[] BASE_DURABILITY = {13, 15, 16, 11};

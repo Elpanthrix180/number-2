@@ -39,5 +39,9 @@
   "item.panthrixjobs.chef_helmet": "Gorro de cocinero",
   "item.panthrixjobs.chef_chestplate": "Chaqueta de cocinero",
   "item.panthrixjobs.chef_leggings": "Pantalón de cocinero",
-  "item.panthrixjobs.chef_boots": "Zapatos de cocinero"
+  "item.panthrixjobs.chef_boots": "Zapatos de cocinero",
+  "item.panthrixjobs.farmer_helmet": "Sombrero de paja de granjero",
+  "item.panthrixjobs.farmer_chestplate": "Camisa de cuadros de granjero",
+  "item.panthrixjobs.farmer_leggings": "Peto vaquero de granjero",
+  "item.panthrixjobs.farmer_boots": "Botas de agua de granjero"
 }
