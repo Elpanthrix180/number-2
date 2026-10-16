@@ -17,7 +17,8 @@ import java.util.function.Supplier;
  * assets/panthrixjobs/textures/models/armor/police_layer_1.png y police_layer_2.png
  */
 public enum ModArmorMaterials implements ArmorMaterial {
-    POLICE("police", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER));
+    POLICE("police", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
+    FIREFIGHTER("firefighter", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER));
 
     // Durabilidad base por pieza (botas, pantalon, pecho, cabeza), igual que el cuero de Minecraft.
     private static final int[] BASE_DURABILITY = {13, 15, 16, 11};
