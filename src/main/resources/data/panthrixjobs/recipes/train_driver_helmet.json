@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "BWB",
+    "B B"
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:blue_wool"
+    },
+    "W": {
+      "item": "minecraft:white_wool"
+    }
+  },
+  "result": {
+    "item": "panthrixjobs:train_driver_helmet",
+    "count": 1
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "KIK",
+    "G G",
+    "G G"
+  ],
+  "key": {
+    "K": {
+      "item": "minecraft:black_wool"
+    },
+    "I": {
+      "item": "minecraft:iron_nugget"
+    },
+    "G": {
+      "item": "minecraft:gray_wool"
+    }
+  },
+  "result": {
+    "item": "panthrixjobs:bus_driver_leggings",
+    "count": 1
+  }
+}

@@ -18,7 +18,15 @@ import java.util.function.Supplier;
  */
 public enum ModArmorMaterials implements ArmorMaterial {
     POLICE("police", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
-    FIREFIGHTER("firefighter", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER));
+    FIREFIGHTER("firefighter", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
+    DOCTOR("doctor", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
+    BUILDER("builder", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
+    PILOT("pilot", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
+    BUS_DRIVER("bus_driver", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
+    TRAIN_DRIVER("train_driver", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
+    MECHANIC("mechanic", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
+    MAIL_CARRIER("mail_carrier", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER)),
+    CHEF("chef", 5, 15, SoundEvents.ARMOR_EQUIP_LEATHER, () -> Ingredient.of(Items.LEATHER));
 
     // Durabilidad base por pieza (botas, pantalon, pecho, cabeza), igual que el cuero de Minecraft.
     private static final int[] BASE_DURABILITY = {13, 15, 16, 11};

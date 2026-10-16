@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "K K",
+    "L L"
+  ],
+  "key": {
+    "K": {
+      "item": "minecraft:black_dye"
+    },
+    "L": {
+      "item": "minecraft:leather"
+    }
+  },
+  "result": {
+    "item": "panthrixjobs:chef_boots",
+    "count": 1
+  }
+}

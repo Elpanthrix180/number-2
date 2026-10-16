@@ -2,7 +2,9 @@
 Uso: python tools/generar_texturas.py  (requiere Pillow: pip install pillow)
 Plantilla de armadura 64x32 (formato clasico de skin de Minecraft)."""
 from pathlib import Path
+import sys
 from PIL import Image
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 ROOT = Path(__file__).resolve().parent.parent / "src/main/resources/assets/panthrixjobs/textures"
 ARMOR = ROOT / "models/armor"
@@ -334,4 +336,11 @@ if __name__ == "__main__":
     ITEM.mkdir(parents=True, exist_ok=True)
     save_set("police", layer1(), layer2(), (HELMET, CHEST, LEGS, BOOTS), PAL)
     save_set("firefighter", fire_layer1(), fire_layer2(), (FHELMET, FCHEST, FLEGS, FBOOTS), FPAL)
+    from uniformes import JOBS, layer1 as gl1, layer2 as gl2, icons
+    for job, spec in JOBS.items():
+        h, c, l, b = icons(spec)
+        for name, im in zip(("helmet", "chestplate", "leggings", "boots"), (h, c, l, b)):
+            im.save(ITEM / f"{job}_{name}.png")
+        gl1(spec).save(ARMOR / f"{job}_layer_1.png")
+        gl2(spec).save(ARMOR / f"{job}_layer_2.png")
     print("Texturas generadas en", ROOT)

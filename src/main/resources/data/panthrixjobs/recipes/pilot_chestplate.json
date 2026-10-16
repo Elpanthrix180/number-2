@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "G G",
+    "WKW",
+    "WWW"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gold_nugget"
+    },
+    "W": {
+      "item": "minecraft:white_wool"
+    },
+    "K": {
+      "item": "minecraft:black_wool"
+    }
+  },
+  "result": {
+    "item": "panthrixjobs:pilot_chestplate",
+    "count": 1
+  }
+}

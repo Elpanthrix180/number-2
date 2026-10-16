@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "S S",
+    "SLS",
+    "SSS"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:light_blue_wool"
+    },
+    "L": {
+      "item": "minecraft:leather"
+    }
+  },
+  "result": {
+    "item": "panthrixjobs:mail_carrier_chestplate",
+    "count": 1
+  }
+}

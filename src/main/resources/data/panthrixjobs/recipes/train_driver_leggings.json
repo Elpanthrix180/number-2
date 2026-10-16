@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "LBL",
+    "B B",
+    "B B"
+  ],
+  "key": {
+    "L": {
+      "item": "minecraft:leather"
+    },
+    "B": {
+      "item": "minecraft:blue_wool"
+    }
+  },
+  "result": {
+    "item": "panthrixjobs:train_driver_leggings",
+    "count": 1
+  }
+}

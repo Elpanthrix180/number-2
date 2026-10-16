@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "G G",
+    "GIG",
+    "GGG"
+  ],
+  "key": {
+    "G": {
+      "item": "minecraft:gray_wool"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    }
+  },
+  "result": {
+    "item": "panthrixjobs:mechanic_chestplate",
+    "count": 1
+  }
+}
