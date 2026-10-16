@@ -1,6 +1,7 @@
 package com.panthrix.panthrixjobs;
 
 import com.mojang.logging.LogUtils;
+import com.panthrix.panthrixjobs.item.ModCreativeTabs;
 import com.panthrix.panthrixjobs.item.ModItems;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -19,6 +20,7 @@ public class PanthrixJobs {
     public PanthrixJobs() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         ModItems.register(modEventBus);
+        ModCreativeTabs.register(modEventBus);
         LOGGER.info("Panthrix Jobs: Disfraces de Empleos se ha cargado correctamente.");
     }
 }
