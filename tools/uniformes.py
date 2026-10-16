@@ -415,6 +415,13 @@ JOBS = {
         features=("sailor_collar",), cuff=(30, 44, 96),
         pants=(236, 236, 242), pant_features=("side_stripe",), pant_accent=(30, 44, 96),
         boots=(20, 20, 24)),
+    "agriculturist": dict(
+        head="cap", head_color=(70, 120, 50), head_accent=(222, 190, 100), visor=(48, 84, 36),
+        badge=(222, 190, 100),
+        chest=(86, 132, 62), accent=(222, 190, 100),
+        features=("buttons", "pocket", "rolled"),
+        pants=(110, 80, 50), belt=(60, 40, 24), pant_features=("knee",),
+        boots=(96, 64, 36), toe=(70, 46, 26)),
     "chef": dict(
         head="chef", head_color=(244, 244, 248), head_accent=(214, 218, 226),
         chest=(244, 244, 248), accent=(30, 30, 34),
