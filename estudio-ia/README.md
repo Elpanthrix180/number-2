@@ -8,3 +8,6 @@ Pestañas: **Imagen** (FLUX, Recraft), **Video** (Kling, MiniMax), **Editar** (F
 
 
 Las imágenes, videos y audios que subes se envían primero al almacenamiento de fal.ai (CDN) y al modelo solo se le pasa la URL, así que funcionan archivos grandes.
+
+
+El historial de creaciones se guarda en tu navegador (localStorage): sobrevive a recargas, pero se guardan los enlaces de fal.ai, no los archivos. Descarga lo que quieras conservar para siempre.

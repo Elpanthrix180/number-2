@@ -27,6 +27,8 @@ section{padding:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .card img,.card video{width:100%;display:block;aspect-ratio:var(--ar,1);object-fit:cover;background:#000}
+.card{position:relative}.del{position:absolute;top:8px;right:8px;background:#000a;color:#fff;border:0;border-radius:8px;width:28px;height:28px;cursor:pointer}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;color:var(--mut)}.bar button{background:none;border:1px solid var(--line);color:var(--mut);border-radius:8px;padding:5px 10px;cursor:pointer}
 .card p{margin:0;padding:10px 12px;font-size:13px;color:var(--mut)}
 .load{aspect-ratio:1;display:grid;place-items:center;color:var(--mut)}
 .empty{color:var(--mut);text-align:center;padding:80px 20px}
@@ -56,7 +58,7 @@ section{padding:20px}
   <div><label>Formato</label><div class="chips" id="ratios"></div></div>
   <button class="go" id="go">Generar</button>
 </aside>
-<section><div class="grid" id="out"></div><div class="empty" id="empty">Tus creaciones aparecerán aquí.</div></section>
+<section><div class="bar"><span id="count"></span><button id="clear">Borrar historial</button></div><div class="grid" id="out"></div><div class="empty" id="empty">Tus creaciones aparecerán aquí.</div></section>
 </main>
 <script>
 const MODELS={
@@ -139,10 +141,23 @@ $("go").onclick=async()=>{
       if(mode==="avatar")input.image_url=imgURL;else input.video_url=await upload(files.vid,key);}
     const r=await fal(model,input,key);
     const url=r.video?.url||r.images?.[0]?.url||r.image?.url;
-    card.firstElementChild.outerHTML=r.video?`<video src="${url}" controls loop autoplay muted></video>`:`<a href="${url}" target="_blank"><img src="${url}"></a>`;
+    const it={url,video:!!r.video,prompt,ratio,mode,date:Date.now()};
+    card.firstElementChild.outerHTML=media(it);addDel(card,it);hist.unshift(it);saveHist();
   }catch(err){card.firstElementChild.textContent="Error: "+err.message.slice(0,200)}
   finally{$("go").disabled=false}
 };
+// Historial guardado en el navegador
+const HKEY="estudio-historial";
+let hist=[];try{hist=JSON.parse(localStorage.getItem(HKEY))||[]}catch(e){}
+function saveHist(){try{localStorage.setItem(HKEY,JSON.stringify(hist))}catch(e){}updCount()}
+function updCount(){const n=$("out").children.length;$("count").textContent=n?n+" creaciones":"";$("empty").hidden=n>0;$("clear").hidden=!hist.length}
+function media(it){return it.video?`<video src="${it.url}" controls loop muted></video>`:`<a href="${it.url}" target="_blank"><img src="${it.url}"></a>`}
+function addDel(card,it){const b=document.createElement("button");b.className="del";b.textContent="×";b.title="Eliminar";
+  b.onclick=()=>{hist=hist.filter(h=>h!==it);card.remove();saveHist()};card.appendChild(b)}
+function showItem(it){const card=document.createElement("div");card.className="card";card.style.setProperty("--ar",it.ratio.replace(":","/"));
+  card.innerHTML=media(it)+"<p></p>";card.querySelector("p").textContent=it.prompt;addDel(card,it);$("out").appendChild(card)}
+hist.forEach(showItem);updCount();
+$("clear").onclick=()=>{if(!confirm("¿Borrar todo el historial?"))return;hist=[];$("out").innerHTML="";saveHist()};
 render();
 </script>
 </body>
