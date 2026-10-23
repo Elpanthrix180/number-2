@@ -38,7 +38,7 @@ section{padding:20px}
 .card img,.card video{width:100%;display:block;aspect-ratio:var(--ar,1);object-fit:cover;background:#000}
 .card{position:relative}.del{position:absolute;top:8px;right:8px;background:#000a;color:#fff;border:0;border-radius:8px;width:28px;height:28px;cursor:pointer}
 .dl{position:absolute;top:8px;right:42px;background:#000a;color:#fff;border:0;border-radius:8px;width:28px;height:28px;cursor:pointer}
-.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;color:var(--mut)}.bar button{background:none;border:1px solid var(--line);color:var(--mut);border-radius:8px;padding:5px 10px;cursor:pointer}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;color:var(--mut)}.bar .f{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.bar input,.bar select{padding:5px 10px;font-size:13px}.bar button{background:none;border:1px solid var(--line);color:var(--mut);border-radius:8px;padding:5px 10px;cursor:pointer}
 .card p{margin:0;padding:10px 12px;font-size:13px;color:var(--mut)}
 .load{aspect-ratio:1;display:grid;place-items:center;color:var(--mut)}
 .empty{color:var(--mut);text-align:center;padding:80px 20px}
@@ -69,7 +69,7 @@ section{padding:20px}
   <div><label>Formato</label><div class="chips" id="ratios"></div></div>
   <button class="go" id="go">Generar</button>
 </aside>
-<section><div class="bar"><span id="count"></span><button id="clear">Borrar historial</button></div><div class="grid" id="out"></div><div class="empty" id="empty">Tus creaciones aparecerán aquí, como cometas en el cielo.</div></section>
+<section><div class="bar"><div class="f"><select id="fmode"><option value="">Todo</option><option value="image">Imagen</option><option value="video">Video</option><option value="edit">Editar</option><option value="avatar">Avatar</option><option value="lipsync">Lipsync</option></select><input id="fq" type="search" placeholder="Buscar por prompt…"><span id="count"></span></div><button id="clear">Borrar historial</button></div><div class="grid" id="out"></div><div class="empty" id="empty">Tus creaciones aparecerán aquí, como cometas en el cielo.</div></section>
 </main>
 <script>
 const MODELS={
@@ -137,7 +137,7 @@ $("go").onclick=async()=>{
   if(mode==="image")input.image_size=SIZE[ratio];
   if(mode==="video")input.aspect_ratio=ratio;
   $("empty").hidden=true;
-  const card=document.createElement("div");card.className="card";card.style.setProperty("--ar",ratio.replace(":","/"));
+  const card=document.createElement("div");card.className="card";card.dataset.mode=mode;card.style.setProperty("--ar",ratio.replace(":","/"));
   card.innerHTML=`<div class="load">Generando…</div><p></p>`;card.querySelector("p").textContent=prompt;
   $("out").prepend(card);$("go").disabled=true;
   try{
@@ -161,7 +161,13 @@ $("go").onclick=async()=>{
 const HKEY="estudio-historial"; // se mantiene para conservar el historial existente
 let hist=[];try{hist=JSON.parse(localStorage.getItem(HKEY))||[]}catch(e){}
 function saveHist(){try{localStorage.setItem(HKEY,JSON.stringify(hist))}catch(e){}updCount()}
-function updCount(){const n=$("out").children.length;$("count").textContent=n?n+" creaciones":"";$("empty").hidden=n>0;$("clear").hidden=!hist.length}
+function updCount(){
+  const fm=$("fmode").value,q=$("fq").value.trim().toLowerCase(),cards=[...$("out").children];let v=0;
+  cards.forEach(c=>{const ok=(!fm||c.dataset.mode===fm)&&(!q||(c.querySelector("p")?.textContent||"").toLowerCase().includes(q));c.hidden=!ok;if(ok)v++});
+  const filt=fm||q;$("count").textContent=cards.length?(filt?v+" de "+cards.length:cards.length)+" creaciones":"";
+  $("empty").textContent=cards.length&&!v?"Ninguna creación coincide con el filtro.":"Tus creaciones aparecerán aquí, como cometas en el cielo.";
+  $("empty").hidden=v>0;$("clear").hidden=!hist.length}
+$("fmode").onchange=updCount;$("fq").oninput=updCount;
 function media(it){return it.video?`<video src="${it.url}" controls loop muted></video>`:`<a href="${it.url}" target="_blank"><img src="${it.url}"></a>`}
 async function download(it){
   const ext=it.video?"mp4":(it.url.split("?")[0].match(/\.(png|jpe?g|webp)$/i)||[,"png"])[1];
@@ -174,7 +180,7 @@ async function download(it){
 function addDel(card,it){const d=document.createElement("button");d.className="dl";d.textContent="↓";d.title="Descargar";
   d.onclick=()=>download(it);card.appendChild(d);const b=document.createElement("button");b.className="del";b.textContent="×";b.title="Eliminar";
   b.onclick=()=>{hist=hist.filter(h=>h!==it);card.remove();saveHist()};card.appendChild(b)}
-function showItem(it){const card=document.createElement("div");card.className="card";card.style.setProperty("--ar",it.ratio.replace(":","/"));
+function showItem(it){const card=document.createElement("div");card.className="card";card.dataset.mode=it.mode||"";card.style.setProperty("--ar",it.ratio.replace(":","/"));
   card.innerHTML=media(it)+"<p></p>";card.querySelector("p").textContent=it.prompt;addDel(card,it);$("out").appendChild(card)}
 hist.forEach(showItem);updCount();
 $("clear").onclick=()=>{if(!confirm("¿Borrar todo el historial?"))return;hist=[];$("out").innerHTML="";saveHist()};
