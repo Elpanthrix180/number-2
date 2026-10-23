@@ -1,23 +1,26 @@
 <!doctype html>
 <html lang="es">
 <head>
+<script>try{const t=localStorage.getItem("comet-tema")||(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark");document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>COMET</title>
 <style>
-:root{--bg:#05060f;--panel:#0d1024cc;--line:#1f2547;--txt:#e9ecff;--mut:#8b93c4;--acc:#7fd6ff;--acc2:#b48cff}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(1200px 600px at 85% -10%,#2a1e5c55,transparent 60%),radial-gradient(900px 500px at -10% 110%,#0e3a5c55,transparent 60%),var(--bg);background-attachment:fixed;color:var(--txt);font:15px/1.5 system-ui,sans-serif}
+:root{--bg:#05060f;--panel:#0d1024cc;--line:#1f2547;--txt:#e9ecff;--mut:#8b93c4;--acc:#7fd6ff;--acc2:#b48cff;--star:255,255,255;--g1:#2a1e5c55;--g2:#0e3a5c55;color-scheme:dark}
+:root[data-theme="light"]{--bg:#f3f5ff;--panel:#ffffffcc;--line:#d5daf0;--txt:#141838;--mut:#5a628f;--acc:#0a8fd1;--acc2:#7b4dff;--star:70,80,150;--g1:#b48cff33;--g2:#7fd6ff33;color-scheme:light}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1200px 600px at 85% -10%,var(--g1),transparent 60%),radial-gradient(900px 500px at -10% 110%,var(--g2),transparent 60%),var(--bg);background-attachment:fixed;color:var(--txt);font:15px/1.5 system-ui,sans-serif}
 header{display:flex;align-items:center;gap:24px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .logo{font-weight:800;font-size:22px;letter-spacing:.25em;display:flex;align-items:center;gap:10px}
-.logo i{width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 12px 3px var(--acc),-14px 6px 18px 2px #7fd6ff66,-28px 12px 22px 1px #b48cff44}
+.logo i{width:12px;height:12px;border-radius:50%;background:rgb(var(--star));box-shadow:0 0 12px 3px var(--acc),-14px 6px 18px 2px #7fd6ff66,-28px 12px 22px 1px #b48cff44}
 .logo b{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
 #stars{position:fixed;inset:0;z-index:-1;pointer-events:none}
-.comet{position:fixed;top:-10px;width:2px;height:2px;background:#fff;border-radius:50%;box-shadow:0 0 6px 2px var(--acc);z-index:-1;animation:fly 9s linear infinite}
+.comet{position:fixed;top:-10px;width:2px;height:2px;background:rgb(var(--star));border-radius:50%;box-shadow:0 0 6px 2px var(--acc);z-index:-1;animation:fly 9s linear infinite}
 .comet:after{content:"";position:absolute;right:1px;top:0;width:140px;height:1px;background:linear-gradient(90deg,transparent,#7fd6ffaa);transform-origin:right}
 @keyframes fly{0%{transform:translate(0,0) rotate(-35deg);opacity:0}5%{opacity:1}30%{opacity:0;transform:translate(-700px,490px) rotate(-35deg)}100%{opacity:0;transform:translate(-700px,490px) rotate(-35deg)}}
 nav button{background:none;border:0;color:var(--mut);font:inherit;padding:6px 10px;cursor:pointer;border-radius:8px}
 nav button.on{color:var(--txt);background:var(--panel)}
 .key{margin-left:auto;display:flex;gap:8px}
+#theme{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:10px;width:40px;cursor:pointer;font-size:16px}
 input,textarea,select{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit}
 main{display:grid;grid-template-columns:340px 1fr;min-height:calc(100vh - 62px)}
 @media(max-width:800px){main{grid-template-columns:1fr}}
@@ -27,7 +30,7 @@ textarea{min-height:120px;resize:vertical;width:100%}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{padding:6px 10px;border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:13px;color:var(--mut)}
 .chip.on{border-color:var(--acc);color:var(--acc)}
-.go{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#05060f;box-shadow:0 0 24px #7fd6ff44;border:0;border-radius:12px;padding:13px;font-weight:700;cursor:pointer;font-size:15px}
+.go{background:linear-gradient(90deg,var(--acc),var(--acc2));color:var(--bg);box-shadow:0 0 24px #7fd6ff44;border:0;border-radius:12px;padding:13px;font-weight:700;cursor:pointer;font-size:15px}
 .go:disabled{opacity:.5}
 section{padding:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
@@ -53,7 +56,7 @@ section{padding:20px}
     <button data-m="avatar">Avatar</button>
     <button data-m="lipsync">Lipsync</button>
   </nav>
-  <div class="key"><input id="key" type="password" placeholder="Clave API de fal.ai"></div>
+  <div class="key"><button id="theme" title="Cambiar tema"></button><input id="key" type="password" placeholder="Clave API de fal.ai"></div>
 </header>
 <main>
 <aside>
@@ -177,8 +180,14 @@ hist.forEach(showItem);updCount();
 $("clear").onclick=()=>{if(!confirm("¿Borrar todo el historial?"))return;hist=[];$("out").innerHTML="";saveHist()};
 // Fondo de estrellas
 (function(){const c=$("stars"),x=c.getContext("2d");function d(){c.width=innerWidth;c.height=innerHeight;
-  for(let i=0;i<180;i++){x.fillStyle=`rgba(255,255,255,${Math.random()*.7+.1})`;x.fillRect(Math.random()*c.width,Math.random()*c.height,Math.random()<.1?2:1,Math.random()<.1?2:1)}}
-  d();addEventListener("resize",d)})();
+  const st=getComputedStyle(document.documentElement).getPropertyValue("--star").trim();
+  for(let i=0;i<180;i++){x.fillStyle=`rgba(${st},${Math.random()*.7+.1})`;x.fillRect(Math.random()*c.width,Math.random()*c.height,Math.random()<.1?2:1,Math.random()<.1?2:1)}}
+  d();addEventListener("resize",d);
+  const btn=$("theme"),root=document.documentElement;
+  if(!root.dataset.theme)root.dataset.theme="dark";
+  const lbl=()=>{const l=root.dataset.theme==="light";btn.textContent=l?"☾":"☀";btn.title=l?"Tema oscuro":"Tema claro"};lbl();
+  btn.onclick=()=>{root.dataset.theme=root.dataset.theme==="light"?"dark":"light";try{localStorage.setItem("comet-tema",root.dataset.theme)}catch(e){}lbl();d()};
+})();
 render();
 </script>
 </body>

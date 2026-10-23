@@ -11,3 +11,6 @@ Las imágenes, videos y audios que subes se envían primero al almacenamiento de
 
 
 El historial de creaciones se guarda en tu navegador (localStorage): sobrevive a recargas, pero se guardan los enlaces de fal.ai, no los archivos. Descarga lo que quieras conservar para siempre.
+
+
+Botón ☀/☾ en la cabecera para cambiar entre tema claro y oscuro; la elección se recuerda en el navegador (por defecto sigue el tema del sistema).
