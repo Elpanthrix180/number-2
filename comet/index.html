@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MARE</title>
+<title>COMET</title>
 <style>
 :root{--bg:#05060f;--panel:#0d1024cc;--line:#1f2547;--txt:#e9ecff;--mut:#8b93c4;--acc:#7fd6ff;--acc2:#b48cff}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(1200px 600px at 85% -10%,#2a1e5c55,transparent 60%),radial-gradient(900px 500px at -10% 110%,#0e3a5c55,transparent 60%),var(--bg);background-attachment:fixed;color:var(--txt);font:15px/1.5 system-ui,sans-serif}
@@ -45,7 +45,7 @@ section{padding:20px}
 <body>
 <canvas id="stars"></canvas><div class="comet" style="left:70%"></div><div class="comet" style="left:95%;animation-delay:4.5s"></div>
 <header>
-  <div class="logo"><i></i><b>MARE</b></div>
+  <div class="logo"><i></i><b>COMET</b></div>
   <nav id="tabs">
     <button data-m="image" class="on">Imagen</button>
     <button data-m="video">Video</button>
@@ -162,7 +162,7 @@ function updCount(){const n=$("out").children.length;$("count").textContent=n?n+
 function media(it){return it.video?`<video src="${it.url}" controls loop muted></video>`:`<a href="${it.url}" target="_blank"><img src="${it.url}"></a>`}
 async function download(it){
   const ext=it.video?"mp4":(it.url.split("?")[0].match(/\.(png|jpe?g|webp)$/i)||[,"png"])[1];
-  const name="mare-"+(it.mode||"creacion")+"-"+(it.date||Date.now())+"."+ext;
+  const name="comet-"+(it.mode||"creacion")+"-"+(it.date||Date.now())+"."+ext;
   try{const b=await (await fetch(it.url)).blob();const u=URL.createObjectURL(b);
     const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),1000);

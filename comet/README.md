@@ -1,4 +1,4 @@
-# MARE
+# COMET
 
 Estudio creativo con IA de temática espacial (cometas y estrellas), inspirado en Higgsfield: generación de imágenes, video (con presets de movimiento de cámara) y edición de imágenes con IA.
 
