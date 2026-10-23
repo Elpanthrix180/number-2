@@ -71,7 +71,7 @@ const PRESETS={
   edit:["Cambiar fondo","Iluminación dorada","Estilo pintura","Blanco y negro"],avatar:[],lipsync:[]};
 const RATIOS={image:["1:1","16:9","9:16","4:3"],video:["16:9","9:16","1:1"],edit:["1:1","16:9","9:16"],avatar:["9:16","1:1","16:9"],lipsync:["16:9","9:16","1:1"]};
 const SIZE={"1:1":"square_hd","16:9":"landscape_16_9","9:16":"portrait_16_9","4:3":"landscape_4_3"};
-let mode="image",preset=null,ratio="1:1",imgData=null,vidData=null,audData=null;
+let mode="image",preset=null,ratio="1:1",imgData=null,vidData=null,audData=null,files={};
 const $=id=>document.getElementById(id);
 try{$("key").value=localStorage.getItem("falkey")||""}catch(e){}
 $("key").onchange=e=>{try{localStorage.setItem("falkey",e.target.value)}catch(_){}};
@@ -86,10 +86,21 @@ function render(){
   $("presets").parentElement.hidden=!PRESETS[mode].length;
 }
 $("tabs").onclick=e=>{if(!e.target.dataset.m)return;mode=e.target.dataset.m;preset=null;document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b===e.target));render()};
-$("file").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{imgData=r.result;$("prev").innerHTML=`<img src="${imgData}">`};r.readAsDataURL(f)};
-const readURL=(f,cb)=>{const r=new FileReader();r.onload=()=>cb(r.result);r.readAsDataURL(f)};
-$("vfile").onchange=e=>e.target.files[0]&&readURL(e.target.files[0],d=>vidData=d);
-$("afile").onchange=e=>e.target.files[0]&&readURL(e.target.files[0],d=>audData=d);
+$("file").onchange=e=>{const f=e.target.files[0];if(!f)return;files.img=f;const r=new FileReader();r.onload=()=>{imgData=r.result;$("prev").innerHTML=`<img src="${imgData}">`};r.readAsDataURL(f)};
+$("vfile").onchange=e=>{const f=e.target.files[0];if(f){files.vid=f;vidData=true}};
+$("afile").onchange=e=>{const f=e.target.files[0];if(f){files.aud=f;audData=true}};
+// Sube el archivo al almacenamiento de fal y devuelve su URL publica (cache por archivo)
+const upCache=new WeakMap();
+async function upload(f,key){
+  if(upCache.has(f))return upCache.get(f);
+  const h={"Authorization":"Key "+key,"Content-Type":"application/json"};
+  const i=await (await fetch("https://rest.alpha.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3",{method:"POST",headers:h,
+    body:JSON.stringify({content_type:f.type||"application/octet-stream",file_name:f.name})})).json();
+  if(!i.upload_url)throw new Error("Subida fallida: "+JSON.stringify(i));
+  const put=await fetch(i.upload_url,{method:"PUT",headers:{"Content-Type":f.type||"application/octet-stream"},body:f});
+  if(!put.ok)throw new Error("Subida fallida: HTTP "+put.status);
+  upCache.set(f,i.file_url);return i.file_url;
+}
 async function fal(model,input,key){
   const h={"Authorization":"Key "+key,"Content-Type":"application/json"};
   const q=await (await fetch("https://queue.fal.run/"+model,{method:"POST",headers:h,body:JSON.stringify(input)})).json();
@@ -112,18 +123,20 @@ $("go").onclick=async()=>{
   const input={prompt};
   if(mode==="image")input.image_size=SIZE[ratio];
   if(mode==="video")input.aspect_ratio=ratio;
-  if(needImg)input.image_url=imgData;
   $("empty").hidden=true;
   const card=document.createElement("div");card.className="card";card.style.setProperty("--ar",ratio.replace(":","/"));
   card.innerHTML=`<div class="load">Generando…</div><p></p>`;card.querySelector("p").textContent=prompt;
   $("out").prepend(card);$("go").disabled=true;
   try{
-    if(talk){let audio=audData;
+    card.firstElementChild.textContent="Subiendo archivos…";
+    const imgURL=needImg?await upload(files.img,key):null;
+    if(needImg)input.image_url=imgURL;
+    if(talk){let audio=files.aud?await upload(files.aud,key):null;
       if(!audio){card.firstElementChild.textContent="Generando voz…";
         const t=await fal("fal-ai/minimax/speech-02-hd",{text:prompt},key);audio=t.audio?.url;}
       card.firstElementChild.textContent="Animando…";
       for(const k in input)delete input[k];input.audio_url=audio;
-      if(mode==="avatar")input.image_url=imgData;else input.video_url=vidData;}
+      if(mode==="avatar")input.image_url=imgURL;else input.video_url=await upload(files.vid,key);}
     const r=await fal(model,input,key);
     const url=r.video?.url||r.images?.[0]?.url||r.image?.url;
     card.firstElementChild.outerHTML=r.video?`<video src="${url}" controls loop autoplay muted></video>`:`<a href="${url}" target="_blank"><img src="${url}"></a>`;
