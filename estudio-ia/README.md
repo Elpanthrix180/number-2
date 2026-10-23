@@ -1,0 +1,13 @@
+# Estudio IA
+
+Clon funcional inspirado en Higgsfield: generación de imágenes, video (con presets de movimiento de cámara) y edición de imágenes con IA.
+
+Uso: abre `index.html` en el navegador, pega tu clave API de [fal.ai](https://fal.ai) (se guarda solo en tu navegador), escribe un prompt y pulsa **Generar**.
+
+Pestañas: **Imagen** (FLUX, Recraft), **Video** (Kling, MiniMax), **Editar** (FLUX img2img / Kontext), **Avatar** (foto + voz → video hablando, OmniHuman) y **Lipsync** (video + voz → labios sincronizados, Sync / Kling). En Avatar y Lipsync puedes subir un audio o escribir el texto en el prompt y se genera la voz con MiniMax TTS.
+
+
+Las imágenes, videos y audios que subes se envían primero al almacenamiento de fal.ai (CDN) y al modelo solo se le pasa la URL, así que funcionan archivos grandes.
+
+
+El historial de creaciones se guarda en tu navegador (localStorage): sobrevive a recargas, pero se guardan los enlaces de fal.ai, no los archivos. Descarga lo que quieras conservar para siempre.
