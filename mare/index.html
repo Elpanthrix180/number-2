@@ -3,12 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Estudio IA</title>
+<title>MARE</title>
 <style>
-:root{--bg:#0b0b0f;--panel:#15151c;--line:#26262f;--txt:#ececf1;--mut:#8a8a99;--acc:#c6ff3d}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.5 system-ui,sans-serif}
+:root{--bg:#05060f;--panel:#0d1024cc;--line:#1f2547;--txt:#e9ecff;--mut:#8b93c4;--acc:#7fd6ff;--acc2:#b48cff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1200px 600px at 85% -10%,#2a1e5c55,transparent 60%),radial-gradient(900px 500px at -10% 110%,#0e3a5c55,transparent 60%),var(--bg);background-attachment:fixed;color:var(--txt);font:15px/1.5 system-ui,sans-serif}
 header{display:flex;align-items:center;gap:24px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.logo{font-weight:800;font-size:20px}.logo b{color:var(--acc)}
+.logo{font-weight:800;font-size:22px;letter-spacing:.25em;display:flex;align-items:center;gap:10px}
+.logo i{width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 12px 3px var(--acc),-14px 6px 18px 2px #7fd6ff66,-28px 12px 22px 1px #b48cff44}
+.logo b{background:linear-gradient(90deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+#stars{position:fixed;inset:0;z-index:-1;pointer-events:none}
+.comet{position:fixed;top:-10px;width:2px;height:2px;background:#fff;border-radius:50%;box-shadow:0 0 6px 2px var(--acc);z-index:-1;animation:fly 9s linear infinite}
+.comet:after{content:"";position:absolute;right:1px;top:0;width:140px;height:1px;background:linear-gradient(90deg,transparent,#7fd6ffaa);transform-origin:right}
+@keyframes fly{0%{transform:translate(0,0) rotate(-35deg);opacity:0}5%{opacity:1}30%{opacity:0;transform:translate(-700px,490px) rotate(-35deg)}100%{opacity:0;transform:translate(-700px,490px) rotate(-35deg)}}
 nav button{background:none;border:0;color:var(--mut);font:inherit;padding:6px 10px;cursor:pointer;border-radius:8px}
 nav button.on{color:var(--txt);background:var(--panel)}
 .key{margin-left:auto;display:flex;gap:8px}
@@ -21,7 +27,7 @@ textarea{min-height:120px;resize:vertical;width:100%}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{padding:6px 10px;border:1px solid var(--line);border-radius:999px;cursor:pointer;font-size:13px;color:var(--mut)}
 .chip.on{border-color:var(--acc);color:var(--acc)}
-.go{background:var(--acc);color:#000;border:0;border-radius:12px;padding:13px;font-weight:700;cursor:pointer;font-size:15px}
+.go{background:linear-gradient(90deg,var(--acc),var(--acc2));color:#05060f;box-shadow:0 0 24px #7fd6ff44;border:0;border-radius:12px;padding:13px;font-weight:700;cursor:pointer;font-size:15px}
 .go:disabled{opacity:.5}
 section{padding:20px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
@@ -37,8 +43,9 @@ section{padding:20px}
 </style>
 </head>
 <body>
+<canvas id="stars"></canvas><div class="comet" style="left:70%"></div><div class="comet" style="left:95%;animation-delay:4.5s"></div>
 <header>
-  <div class="logo">Estudio<b>IA</b></div>
+  <div class="logo"><i></i><b>MARE</b></div>
   <nav id="tabs">
     <button data-m="image" class="on">Imagen</button>
     <button data-m="video">Video</button>
@@ -59,7 +66,7 @@ section{padding:20px}
   <div><label>Formato</label><div class="chips" id="ratios"></div></div>
   <button class="go" id="go">Generar</button>
 </aside>
-<section><div class="bar"><span id="count"></span><button id="clear">Borrar historial</button></div><div class="grid" id="out"></div><div class="empty" id="empty">Tus creaciones aparecerán aquí.</div></section>
+<section><div class="bar"><span id="count"></span><button id="clear">Borrar historial</button></div><div class="grid" id="out"></div><div class="empty" id="empty">Tus creaciones aparecerán aquí, como cometas en el cielo.</div></section>
 </main>
 <script>
 const MODELS={
@@ -148,14 +155,14 @@ $("go").onclick=async()=>{
   finally{$("go").disabled=false}
 };
 // Historial guardado en el navegador
-const HKEY="estudio-historial";
+const HKEY="estudio-historial"; // se mantiene para conservar el historial existente
 let hist=[];try{hist=JSON.parse(localStorage.getItem(HKEY))||[]}catch(e){}
 function saveHist(){try{localStorage.setItem(HKEY,JSON.stringify(hist))}catch(e){}updCount()}
 function updCount(){const n=$("out").children.length;$("count").textContent=n?n+" creaciones":"";$("empty").hidden=n>0;$("clear").hidden=!hist.length}
 function media(it){return it.video?`<video src="${it.url}" controls loop muted></video>`:`<a href="${it.url}" target="_blank"><img src="${it.url}"></a>`}
 async function download(it){
   const ext=it.video?"mp4":(it.url.split("?")[0].match(/\.(png|jpe?g|webp)$/i)||[,"png"])[1];
-  const name="estudio-"+(it.mode||"creacion")+"-"+(it.date||Date.now())+"."+ext;
+  const name="mare-"+(it.mode||"creacion")+"-"+(it.date||Date.now())+"."+ext;
   try{const b=await (await fetch(it.url)).blob();const u=URL.createObjectURL(b);
     const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(u),1000);
@@ -168,6 +175,10 @@ function showItem(it){const card=document.createElement("div");card.className="c
   card.innerHTML=media(it)+"<p></p>";card.querySelector("p").textContent=it.prompt;addDel(card,it);$("out").appendChild(card)}
 hist.forEach(showItem);updCount();
 $("clear").onclick=()=>{if(!confirm("¿Borrar todo el historial?"))return;hist=[];$("out").innerHTML="";saveHist()};
+// Fondo de estrellas
+(function(){const c=$("stars"),x=c.getContext("2d");function d(){c.width=innerWidth;c.height=innerHeight;
+  for(let i=0;i<180;i++){x.fillStyle=`rgba(255,255,255,${Math.random()*.7+.1})`;x.fillRect(Math.random()*c.width,Math.random()*c.height,Math.random()<.1?2:1,Math.random()<.1?2:1)}}
+  d();addEventListener("resize",d)})();
 render();
 </script>
 </body>
