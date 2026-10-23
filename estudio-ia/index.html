@@ -28,6 +28,7 @@ section{padding:20px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .card img,.card video{width:100%;display:block;aspect-ratio:var(--ar,1);object-fit:cover;background:#000}
 .card{position:relative}.del{position:absolute;top:8px;right:8px;background:#000a;color:#fff;border:0;border-radius:8px;width:28px;height:28px;cursor:pointer}
+.dl{position:absolute;top:8px;right:42px;background:#000a;color:#fff;border:0;border-radius:8px;width:28px;height:28px;cursor:pointer}
 .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;color:var(--mut)}.bar button{background:none;border:1px solid var(--line);color:var(--mut);border-radius:8px;padding:5px 10px;cursor:pointer}
 .card p{margin:0;padding:10px 12px;font-size:13px;color:var(--mut)}
 .load{aspect-ratio:1;display:grid;place-items:center;color:var(--mut)}
@@ -152,7 +153,16 @@ let hist=[];try{hist=JSON.parse(localStorage.getItem(HKEY))||[]}catch(e){}
 function saveHist(){try{localStorage.setItem(HKEY,JSON.stringify(hist))}catch(e){}updCount()}
 function updCount(){const n=$("out").children.length;$("count").textContent=n?n+" creaciones":"";$("empty").hidden=n>0;$("clear").hidden=!hist.length}
 function media(it){return it.video?`<video src="${it.url}" controls loop muted></video>`:`<a href="${it.url}" target="_blank"><img src="${it.url}"></a>`}
-function addDel(card,it){const b=document.createElement("button");b.className="del";b.textContent="×";b.title="Eliminar";
+async function download(it){
+  const ext=it.video?"mp4":(it.url.split("?")[0].match(/\.(png|jpe?g|webp)$/i)||[,"png"])[1];
+  const name="estudio-"+(it.mode||"creacion")+"-"+(it.date||Date.now())+"."+ext;
+  try{const b=await (await fetch(it.url)).blob();const u=URL.createObjectURL(b);
+    const a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),1000);
+  }catch(e){window.open(it.url,"_blank")}
+}
+function addDel(card,it){const d=document.createElement("button");d.className="dl";d.textContent="↓";d.title="Descargar";
+  d.onclick=()=>download(it);card.appendChild(d);const b=document.createElement("button");b.className="del";b.textContent="×";b.title="Eliminar";
   b.onclick=()=>{hist=hist.filter(h=>h!==it);card.remove();saveHist()};card.appendChild(b)}
 function showItem(it){const card=document.createElement("div");card.className="card";card.style.setProperty("--ar",it.ratio.replace(":","/"));
   card.innerHTML=media(it)+"<p></p>";card.querySelector("p").textContent=it.prompt;addDel(card,it);$("out").appendChild(card)}
