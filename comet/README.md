@@ -14,3 +14,6 @@ El historial de creaciones se guarda en tu navegador (localStorage): sobrevive a
 
 
 Botón ☀/☾ en la cabecera para cambiar entre tema claro y oscuro; la elección se recuerda en el navegador (por defecto sigue el tema del sistema).
+
+
+Encima de la galería puedes filtrar el historial por tipo (Imagen, Video, Editar, Avatar, Lipsync) y buscar por texto del prompt.
