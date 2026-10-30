@@ -17,3 +17,6 @@ Botón ☀/☾ en la cabecera para cambiar entre tema claro y oscuro; la elecci�
 
 
 Encima de la galería puedes filtrar el historial por tipo (Imagen, Video, Editar, Avatar, Lipsync) y buscar por texto del prompt.
+
+
+El botón **✦ Mejorar** junto al prompt reescribe tu idea con más detalle usando un LLM de fal.ai (any-llm), adaptado a la pestaña en la que estás.
