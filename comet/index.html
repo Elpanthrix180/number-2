@@ -74,7 +74,7 @@ section{padding:20px}
 </main>
 <script>
 const MODELS={
-  image:[["fal-ai/flux/schnell","FLUX Schnell"],["fal-ai/flux/dev","FLUX Dev"],["fal-ai/recraft-v3","Recraft V3"]],
+  image:[["fal-ai/flux/schnell","FLUX Schnell"],["fal-ai/flux/dev","FLUX Dev"],["fal-ai/recraft-v3","Recraft V3"],["fal-ai/ideogram/v3","Ideogram 3 (texto en imagen)"],["fal-ai/ideogram/v2","Ideogram 2"]],
   video:[["fal-ai/kling-video/v1.6/standard/text-to-video","Kling 1.6 (texto)"],["fal-ai/kling-video/v1.6/standard/image-to-video","Kling 1.6 (imagen)"],["fal-ai/minimax/video-01","MiniMax Video-01"],["fal-ai/bytedance/seedance/v1/pro/text-to-video","Seedance 1.0 Pro (texto)"],["fal-ai/bytedance/seedance/v1/pro/image-to-video","Seedance 1.0 Pro (imagen)"],["fal-ai/bytedance/seedance/v1/lite/text-to-video","Seedance 1.0 Lite (texto)"],["fal-ai/bytedance/seedance/v1/lite/image-to-video","Seedance 1.0 Lite (imagen)"],["fal-ai/veo3","Veo 3 (texto, con audio)"],["fal-ai/veo3/fast","Veo 3 Fast (texto, con audio)"],["fal-ai/veo3/image-to-video","Veo 3 (imagen, con audio)"],["fal-ai/veo2","Veo 2 (texto)"],["fal-ai/veo2/image-to-video","Veo 2 (imagen)"],["fal-ai/minimax/hailuo-02/standard/text-to-video","Hailuo 02 Standard (texto)"],["fal-ai/minimax/hailuo-02/standard/image-to-video","Hailuo 02 Standard (imagen)"],["fal-ai/minimax/hailuo-02/pro/text-to-video","Hailuo 02 Pro (texto)"],["fal-ai/minimax/hailuo-02/pro/image-to-video","Hailuo 02 Pro (imagen)"]],
   edit:[["fal-ai/flux/dev/image-to-image","FLUX img2img"],["fal-ai/flux-pro/kontext","FLUX Kontext"]],
   avatar:[["fal-ai/bytedance/omnihuman","OmniHuman (foto que habla)"]],
@@ -150,6 +150,7 @@ $("go").onclick=async()=>{
   if(talk&&!audData&&!prompt)return alert("Sube un audio o escribe el texto a decir");
   const input={prompt};
   if(mode==="image")input.image_size=SIZE[ratio];
+  if(model.includes("ideogram/v2"))input.aspect_ratio=ratio; // Ideogram 2 usa aspect_ratio en vez de image_size
   if(mode==="video")input.aspect_ratio=ratio;
   $("empty").hidden=true;
   const card=document.createElement("div");card.className="card";card.dataset.mode=mode;card.style.setProperty("--ar",ratio.replace(":","/"));
