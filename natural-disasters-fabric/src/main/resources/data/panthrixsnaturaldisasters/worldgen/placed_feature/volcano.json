@@ -1,0 +1,6 @@
+{
+  "feature": "panthrixsnaturaldisasters:volcano",
+  "placement": [
+    { "type": "minecraft:biome" }
+  ]
+}

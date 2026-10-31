@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "panthrixsnaturaldisasters",
+  "version": "${version}",
+  "name": "Panthrix's Natural Disasters",
+  "description": "Catastrofes naturales aleatorias: tornados, terremotos, volcanes, inundaciones y mas.",
+  "authors": ["elpanthrix180"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.panthrix.naturaldisasters.NaturalDisastersMod"],
+    "client": ["com.panthrix.naturaldisasters.client.NaturalDisastersClient"]
+  },
+  "mixins": [
+    "panthrixsnaturaldisasters.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.14.21",
+    "fabric-api": "*",
+    "minecraft": "~1.20.1",
+    "java": ">=17"
+  }
+}
