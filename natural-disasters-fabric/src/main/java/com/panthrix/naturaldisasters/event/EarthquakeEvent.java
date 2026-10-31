@@ -46,7 +46,6 @@ extends CatastropheEvent {
 
     @Override
     public void tick(ServerLevel level, CatastropheSavedData d, CatastrophePhase phase, long now) {
-        float shake;
         if (phase != CatastrophePhase.PREPARATION && phase != CatastrophePhase.ACTIVE && phase != CatastrophePhase.ENDING) {
             return;
         }
