@@ -96,31 +96,16 @@ extends CatastropheEvent {
     }
 
     private static void tintSky(ServerLevel level, CatastropheSavedData d, CatastrophePhase phase, long now) {
-        float strength;
         if (!((Boolean)CatastropheConfig.METEOR_SKY_TINT.get()).booleanValue() || now % 20L != 0L) {
             return;
         }
-        switch (phase) {
-            case WARNING: {
-                float f = 0.35f;
-                break;
-            }
-            case PREPARATION: {
-                float f = 0.75f;
-                break;
-            }
-            case ACTIVE: {
-                float f = 1.0f;
-                break;
-            }
-            case ENDING: {
-                float f = 0.5f;
-                break;
-            }
-            default: {
-                float f = strength = 0.0f;
-            }
-        }
+        float strength = switch (phase) {
+            case WARNING -> 0.35f;
+            case PREPARATION -> 0.75f;
+            case ACTIVE -> 1.0f;
+            case ENDING -> 0.5f;
+            default -> 0.0f;
+        };
         if (strength <= 0.0f) {
             return;
         }
