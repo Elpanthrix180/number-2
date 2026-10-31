@@ -1,0 +1,13 @@
+# Dependencias base de MARS.AI (todas gratuitas y de código abierto).
+# PyTorch NO está aquí: install_windows.bat instala la versión adecuada
+# (CUDA si hay GPU NVIDIA, CPU en caso contrario).
+gradio>=6.0,<7
+pillow>=10.0
+numpy>=1.26
+diffusers>=0.32,<1.0
+transformers>=4.44
+accelerate>=0.33
+safetensors>=0.4
+huggingface_hub>=0.25
+keyring>=24.0
+psutil>=5.9

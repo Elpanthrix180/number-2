@@ -1,0 +1,43 @@
+/* MARS.AI — tema oscuro con acentos morados y azules */
+:root, .dark {
+  --mars-bg: #07070c;
+  --mars-panel: #11111a;
+  --mars-panel-2: #181826;
+  --mars-border: #262640;
+  --mars-purple: #8b5cf6;
+  --mars-blue: #3b82f6;
+  --mars-text: #e7e7f3;
+  --mars-muted: #9a9ab5;
+}
+body, .gradio-container { background: radial-gradient(1200px 600px at 10% -10%, #1c1240 0%, transparent 60%),
+  radial-gradient(900px 500px at 110% 10%, #0d1d45 0%, transparent 55%), var(--mars-bg) !important;
+  color: var(--mars-text) !important; }
+.gradio-container { max-width: 1400px !important; }
+#mars-header { text-align: center; padding: 18px 0 6px; }
+#mars-header h1 { font-size: 3rem; margin: 0; letter-spacing: .12em; font-weight: 800;
+  background: linear-gradient(90deg, #a78bfa, #60a5fa, #a78bfa); background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: mars-shine 6s linear infinite; text-shadow: 0 0 40px rgba(139,92,246,.25); }
+#mars-header p { color: var(--mars-muted); margin: 4px 0 0; font-size: 1.1rem; }
+@keyframes mars-shine { to { background-position: 200% center; } }
+
+#mars-sidebar { background: var(--mars-panel) !important; border: 1px solid var(--mars-border);
+  border-radius: 16px; padding: 10px !important; min-width: 190px; }
+#mars-sidebar button { justify-content: flex-start; text-align: left; background: transparent !important;
+  border: 1px solid transparent !important; color: var(--mars-text) !important; transition: all .2s ease; }
+#mars-sidebar button:hover { background: var(--mars-panel-2) !important; border-color: var(--mars-purple) !important;
+  box-shadow: 0 0 14px rgba(139,92,246,.35); }
+
+.mars-card { background: var(--mars-panel) !important; border: 1px solid var(--mars-border) !important;
+  border-radius: 16px !important; }
+#mars-prompt textarea { font-size: 1.05rem !important; min-height: 120px; }
+#mars-generate { background: linear-gradient(90deg, var(--mars-purple), var(--mars-blue)) !important;
+  border: none !important; color: white !important; font-weight: 700; letter-spacing: .06em;
+  box-shadow: 0 0 22px rgba(99,102,241,.45); transition: transform .15s ease, box-shadow .2s ease; }
+#mars-generate:hover { transform: translateY(-1px); box-shadow: 0 0 32px rgba(139,92,246,.7); }
+#mars-cancel { border-color: #ef4444 !important; color: #fca5a5 !important; }
+.mars-status { font-family: ui-monospace, Consolas, monospace; font-size: .9rem; color: var(--mars-muted); }
+.mars-muted { color: var(--mars-muted); }
+.mars-style-card { border: 1px solid var(--mars-border); border-radius: 14px; padding: 10px 12px;
+  background: var(--mars-panel-2); transition: border-color .2s, box-shadow .2s; }
+.mars-style-card:hover { border-color: var(--mars-blue); box-shadow: 0 0 12px rgba(59,130,246,.3); }
