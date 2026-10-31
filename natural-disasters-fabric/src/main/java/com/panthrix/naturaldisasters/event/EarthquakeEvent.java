@@ -51,19 +51,7 @@ extends CatastropheEvent {
             return;
         }
         double f = CatastropheConfig.intensityFactor();
-        switch (phase) {
-            case PREPARATION: {
-                float f2 = 0.35f;
-                break;
-            }
-            case ACTIVE: {
-                float f2 = (float)(1.2 * f);
-                break;
-            }
-            default: {
-                float f2 = shake = 0.5f;
-            }
-        }
+        float shake = phase == CatastrophePhase.PREPARATION ? 0.35f : (phase == CatastrophePhase.ACTIVE ? (float)(1.2 * f) : 0.5f);
         if (now % 20L == 0L) {
             for (ServerPlayer p : DisasterUtil.playersInArea(level, d)) {
                 if (((Boolean)CatastropheConfig.QUAKE_CAMERA_SHAKE.get()).booleanValue()) {
