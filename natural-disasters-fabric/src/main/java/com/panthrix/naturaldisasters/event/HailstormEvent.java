@@ -77,10 +77,8 @@ extends CatastropheEvent {
             }
         }
         if (now % 20L == 0L && !CatastropheConfig.destructionOff()) {
-            void var10_16;
             int tries = 1 + (int)(3.0 * f);
-            boolean bl2 = false;
-            while (var10_16 < tries) {
+            for (int i = 0; i < tries; ++i) {
                 BlockPos pos = DisasterUtil.randomSurface(level, d, level.getRandom());
                 if (pos != null) {
                     BlockPos below;
@@ -88,11 +86,10 @@ extends CatastropheEvent {
                     if (((Boolean)CatastropheConfig.HAIL_CROPS.get()).booleanValue()) {
                         HailstormEvent.damageCrop(level, d, pos);
                     }
-                    if (((Boolean)CatastropheConfig.HAIL_GLASS.get()).booleanValue() && CatastropheConfig.DESTRUCTION.get() == CatastropheConfig.Destruction.INTENSE && ((s = level.getBlockState(below = pos.below())).is(Tags.Blocks.GLASS) || s.is(ConventionalBlockTags.GLASS_PANES) || s.is(Blocks.GLASS_PANE)) && BlockProtection.canModify(level, below, s) && DisasterUtil.takeBlockBudget(d)) {
+                    if (((Boolean)CatastropheConfig.HAIL_GLASS.get()).booleanValue() && CatastropheConfig.DESTRUCTION.get() == CatastropheConfig.Destruction.INTENSE && ((s = level.getBlockState(below = pos.below())).is(ConventionalBlockTags.GLASS_BLOCKS) || s.is(Blocks.GLASS) || s.is(ConventionalBlockTags.GLASS_PANES) || s.is(Blocks.GLASS_PANE)) && BlockProtection.canModify(level, below, s) && DisasterUtil.takeBlockBudget(d)) {
                         level.destroyBlock(below, false);
                     }
                 }
-                ++var10_16;
             }
         }
     }
@@ -103,14 +100,14 @@ extends CatastropheEvent {
         if (!(s.getBlock() instanceof CropBlock)) {
             return;
         }
-        Object object = s.hasProperty((Property)BlockStateProperties.AGE_7) ? BlockStateProperties.AGE_7 : (age = s.hasProperty((Property)BlockStateProperties.AGE_3) ? BlockStateProperties.AGE_3 : null);
-        if (age == null || (Integer)s.getValue((Property)age) <= 0 || !BlockProtection.canModify(level, pos, s)) {
+        age = s.hasProperty(BlockStateProperties.AGE_7) ? BlockStateProperties.AGE_7 : (s.hasProperty(BlockStateProperties.AGE_3) ? BlockStateProperties.AGE_3 : null);
+        if (age == null || s.getValue(age) <= 0 || !BlockProtection.canModify(level, pos, s)) {
             return;
         }
         if (!DisasterUtil.takeBlockBudget(d)) {
             return;
         }
-        level.setBlock(pos, (BlockState)s.setValue((Property)age, (Comparable)Integer.valueOf((Integer)s.getValue((Property)age) - 1)), 2);
+        level.setBlock(pos, s.setValue(age, s.getValue(age) - 1), 2);
     }
 
     @Override
