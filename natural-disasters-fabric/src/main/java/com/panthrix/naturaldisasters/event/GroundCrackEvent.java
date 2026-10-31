@@ -44,7 +44,7 @@ extends CatastropheEvent {
         double base = r.nextDouble() * Math.PI * 2.0;
         for (int i = 0; i < n; ++i) {
             double ang = base + (double)i * (Math.PI * 2 / (double)n) + (r.nextDouble() - 0.5) * 0.6;
-            cracks.add((Object)GroundCrackEvent.newCrack((double)d.centerX + 0.5, (double)d.centerZ + 0.5, ang, (Integer)CatastropheConfig.CRACKS_LENGTH.get(), ((Integer)CatastropheConfig.CRACKS_WIDTH.get()).intValue(), (Integer)CatastropheConfig.CRACKS_DEPTH.get(), 0));
+            cracks.add(GroundCrackEvent.newCrack((double)d.centerX + 0.5, (double)d.centerZ + 0.5, ang, (Integer)CatastropheConfig.CRACKS_LENGTH.get(), ((Integer)CatastropheConfig.CRACKS_WIDTH.get()).intValue(), (Integer)CatastropheConfig.CRACKS_DEPTH.get(), 0));
         }
         d.eventData.put(KEY, (Tag)cracks);
         d.setDirty();
@@ -105,7 +105,7 @@ extends CatastropheEvent {
             double side = r.nextBoolean() ? 1.0 : -1.0;
             double ang = c.getDouble("ang") + side * (0.5 + r.nextDouble() * 0.7);
             int left = c.getInt("len") - t;
-            cracks.add((Object)GroundCrackEvent.newCrack(c.getDouble("x"), c.getDouble("z"), ang, (int)((double)left * (0.5 + r.nextDouble() * 0.4)), c.getDouble("width") * 0.6, (int)((double)c.getInt("depth") * 0.7), c.getInt("gen") + 1));
+            cracks.add(GroundCrackEvent.newCrack(c.getDouble("x"), c.getDouble("z"), ang, (int)((double)left * (0.5 + r.nextDouble() * 0.4)), c.getDouble("width") * 0.6, (int)((double)c.getInt("depth") * 0.7), c.getInt("gen") + 1));
         }
         d.eventData.put(KEY, (Tag)cracks);
         d.setDirty();

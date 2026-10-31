@@ -167,7 +167,7 @@ extends CatastropheEvent {
         if (ball != null) {
             m.putUUID("ent", ball.getUUID());
         }
-        meteors.add((Object)m);
+        meteors.add(m);
     }
 
     private static Entity spawnBall(ServerLevel level, Vec3 pos, float scale) {
@@ -206,7 +206,7 @@ extends CatastropheEvent {
     private static ListTag floats(float ... values) {
         ListTag list = new ListTag();
         for (float v : values) {
-            list.add((Object)FloatTag.valueOf((float)v));
+            list.add(FloatTag.valueOf((float)v));
         }
         return list;
     }
@@ -263,7 +263,7 @@ extends CatastropheEvent {
         job.putInt("stage", 0);
         job.putInt("idx", 0);
         ListTag craters = d.eventData.getList(CRATERS, 10);
-        craters.add((Object)job);
+        craters.add(job);
         d.eventData.put(CRATERS, (Tag)craters);
         d.setDirty();
     }

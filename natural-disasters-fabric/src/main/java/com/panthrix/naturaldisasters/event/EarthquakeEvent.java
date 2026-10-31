@@ -112,19 +112,19 @@ extends CatastropheEvent {
         ListTag plans = new ListTag();
         int cracks = Math.max(1, (int)Math.round((double)((Integer)CatastropheConfig.QUAKE_CRACK_COUNT.get()).intValue() * Math.min(f, 1.5)));
         for (int i = 0; i < cracks; ++i) {
-            plans.add((Object)EarthquakeEvent.crackPlan(r, d, radius, (Integer)CatastropheConfig.QUAKE_CRACK_WIDTH.get(), (Integer)CatastropheConfig.QUAKE_CRACK_DEPTH.get(), f));
+            plans.add(EarthquakeEvent.crackPlan(r, d, radius, (Integer)CatastropheConfig.QUAKE_CRACK_WIDTH.get(), (Integer)CatastropheConfig.QUAKE_CRACK_DEPTH.get(), f));
         }
         if (intense) {
             int trenches = 1 + (f > 1.0 ? 1 : 0);
             for (int i = 0; i < trenches; ++i) {
-                plans.add((Object)EarthquakeEvent.crackPlan(r, d, radius, Math.min(7, (Integer)CatastropheConfig.QUAKE_CRACK_WIDTH.get() + 3), Math.max(3, (Integer)CatastropheConfig.QUAKE_CRACK_DEPTH.get() / 3), f));
+                plans.add(EarthquakeEvent.crackPlan(r, d, radius, Math.min(7, (Integer)CatastropheConfig.QUAKE_CRACK_WIDTH.get() + 3), Math.max(3, (Integer)CatastropheConfig.QUAKE_CRACK_DEPTH.get() / 3), f));
             }
             if (((Boolean)CatastropheConfig.QUAKE_CAVES.get()).booleanValue()) {
                 int caves = 1 + (f > 1.0 ? 1 : 0);
                 for (int i = 0; i < caves; ++i) {
                     CompoundTag cave = EarthquakeEvent.cavePlan(level, r, d, radius);
                     if (cave == null) continue;
-                    plans.add((Object)cave);
+                    plans.add(cave);
                 }
             }
         }
