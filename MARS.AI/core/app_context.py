@@ -11,6 +11,7 @@ from database.db import Database
 from gallery.library import Library
 from generator.engine import GenerationJob
 from models.manager import ModelManager
+from tools.face_restore import FaceRestorer
 from tools.realesrgan import RealESRGAN
 
 log = logging.getLogger(__name__)
@@ -28,11 +29,14 @@ class AppContext:
         self.current_job: GenerationJob | None = None
         self.upscaler = RealESRGAN(s.models_path)
         self.upscale_cancel = threading.Event()
+        self.faces = FaceRestorer(s.models_path)
+        self.faces_cancel = threading.Event()
 
     def free_memory(self) -> str:
         self.models.unload()
         self.upscaler.unload()
-        return "Memoria liberada (modelo de difusión y Real-ESRGAN)."
+        self.faces.unload()
+        return "Memoria liberada (modelo de difusión, Real-ESRGAN y GFPGAN)."
 
     @property
     def settings(self):

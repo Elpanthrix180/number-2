@@ -18,6 +18,7 @@ from generator.prompt_enhancer import enhance_prompt
 from generator.styles import STYLES, get_style, style_names
 from models.backends import BackendUnavailable, GenRequest
 from tools import image_tools as T
+from tools import face_restore as FR
 from tools import realesrgan as RE
 
 log = logging.getLogger(__name__)
@@ -416,6 +417,70 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                             rs_out, rs_msg = gr.Image(label="Resultado", format="png"), gr.Markdown()
                             rs_btn.click(lambda im, d: classic_tool(T.restore, im, int(d), kind="restore"),
                                          [rs_in, rs_dn], [rs_out, rs_msg])
+                        with gr.Tab("Caras IA"):
+                            gr.Markdown(f"**GFPGAN v1.4** — restaura caras borrosas, antiguas o de baja calidad. "
+                                        f"Licencias: {FR.LICENSE}. Descarga única de ~{FR.TOTAL_MB} MB desde los "
+                                        "repositorios oficiales en GitHub, verificada con SHA-256. "
+                                        "Solo mejora las caras; combínalo con «Restauración» para el resto de la foto.")
+                            fc_stat = gr.Markdown(lambda: f"Estado: {ctx.faces.status()}")
+                            with gr.Row():
+                                fc_auth = gr.Checkbox(False, label=f"Autorizo descargar GFPGAN (~{FR.TOTAL_MB} MB)")
+                                fc_dl = gr.Button("⬇️ Descargar modelo")
+                            fc_in = gr.Image(type="pil", label="Foto con caras")
+                            with gr.Row():
+                                fc_w = gr.Slider(0, 1, 0.6, step=0.05, label="Intensidad (más baja = más fiel al original)")
+                                fc_up = gr.Radio([("×1", 1), ("×2", 2)], value=1,
+                                                 label="Ampliar foto (×2 usa Real-ESRGAN si está instalado)")
+                            with gr.Row():
+                                fc_btn = gr.Button("Restaurar caras", variant="primary")
+                                fc_cancel = gr.Button("⛔ Cancelar")
+                            fc_prog = gr.HTML()
+                            fc_out = gr.Image(label="Resultado", format="png")
+
+                            def face_restore(im, wgt, up):
+                                if im is None:
+                                    yield progress_html(0, 1, "❌ Sube una imagen primero."), None
+                                    return
+                                if not ctx.faces.installed():
+                                    yield progress_html(0, 1, "❌ Descarga primero el modelo (arriba)."), None
+                                    return
+                                state = {"step": 0, "total": 1, "res": None, "err": None}
+                                ctx.faces_cancel = threading.Event()
+                                t0 = time.perf_counter()
+
+                                def work():
+                                    try:
+                                        state["res"] = ctx.faces.restore(
+                                            load_user_image(im), float(wgt), int(up), upscaler=ctx.upscaler,
+                                            progress=lambda a, b: state.update(step=a, total=b),
+                                            cancel=ctx.faces_cancel)
+                                    except Exception as exc:  # noqa: BLE001
+                                        state["err"] = str(exc)
+                                th = threading.Thread(target=work, daemon=True)
+                                th.start()
+                                while th.is_alive():
+                                    yield progress_html(state["step"], state["total"],
+                                                        f"⏳ Restaurando caras: {state['step']}/{state['total']} · "
+                                                        f"{time.perf_counter() - t0:.1f} s"), None
+                                    time.sleep(0.5)
+                                if state["err"]:
+                                    yield progress_html(0, 1, f"❌ {state['err']}"), None
+                                    return
+                                out, n = state["res"]
+                                secs = round(time.perf_counter() - t0, 1)
+                                if n == 0:
+                                    yield progress_html(0, 1, f"⚠️ No se detectó ninguna cara ({secs} s)."), None
+                                    return
+                                rec = ctx.library.save(out, prompt=f"[caras IA, intensidad {wgt}]",
+                                                       model="GFPGAN v1.4", kind="faces_ai", seconds=secs)
+                                yield progress_html(1, 1, f"✅ {n} cara(s) restaurada(s) en {secs} s · "
+                                                          f"{out.width}×{out.height} · guardado #{rec.id}"), out
+
+                            fc_dl.click(lambda ok: ctx.faces.download(ok), fc_auth, fc_stat) \
+                                .then(lambda: False, None, fc_auth)
+                            fc_btn.click(face_restore, [fc_in, fc_w, fc_up], [fc_prog, fc_out])
+                            fc_cancel.click(lambda: (ctx.faces_cancel.set(), progress_html(0, 1, "⛔ Cancelando…"))[1],
+                                            None, fc_prog)
                         with gr.Tab("Quitar fondo"):
                             gr.Markdown("Estado: " + ("🟢 disponible (rembg)" if T.rembg_available() else
                                                       "🔴 no instalado — ejecuta `install_optional_tools.bat`"))
