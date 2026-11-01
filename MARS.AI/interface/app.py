@@ -28,17 +28,32 @@ CSS_FILE = Path(__file__).with_name("theme.css")
 PAGES = [N_("Inicio"), N_("Crear imagen"), N_("Explorar estilos"), N_("Mis creaciones"), N_("Favoritos"),
          N_("Herramientas"), N_("Modelos IA"), N_("Configuración")]
 ICONS = ["🏠", "✨", "🎨", "🖼️", "⭐", "🛠️", "🧠", "⚙️"]
-FORCE_DARK_JS = """() => { document.body.classList.add('dark');
-  const u = new URL(window.location); if (u.searchParams.get('__theme') !== 'dark') {
-  u.searchParams.set('__theme','dark'); window.history.replaceState({}, '', u); } }"""
+THEMES = {"oscuro": N_("Oscuro"), "claro": N_("Claro"), "sistema": N_("Sistema (como Windows)")}
+# Instala window.marsApplyTheme y aplica el tema guardado. Gradio pinta el modo oscuro con la clase
+# .dark en <body>; «sistema» sigue la preferencia del sistema operativo y reacciona si cambia.
+THEME_JS = """() => {
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  window.marsApplyTheme = (th) => {
+    window.marsTheme = th;
+    const dark = th === 'oscuro' || (th === 'sistema' && mq.matches);
+    document.body.classList.toggle('dark', dark);
+    const u = new URL(window.location);
+    u.searchParams.set('__theme', dark ? 'dark' : 'light');
+    window.history.replaceState({}, '', u);
+  };
+  mq.addEventListener('change', () => { if (window.marsTheme === 'sistema') window.marsApplyTheme('sistema'); });
+  window.marsApplyTheme('%THEME%');
+}"""
+
+
+def theme_js(theme: str) -> str:
+    return THEME_JS.replace("%THEME%", theme if theme in THEMES else "oscuro")
 
 
 def progress_html(step: int, total: int, label: str) -> str:
     pct = int(100 * step / max(1, total))
     return (f"<div class='mars-status'>{label}</div>"
-            f"<div style='height:8px;border-radius:6px;background:#1f1f33;overflow:hidden;margin-top:6px'>"
-            f"<div style='width:{pct}%;height:100%;background:linear-gradient(90deg,#8b5cf6,#3b82f6);"
-            f"transition:width .3s'></div></div>")
+            f"<div class='mars-track'><div style='width:{pct}%'></div></div>")
 
 
 def style_choices() -> list[tuple[str, str]]:
@@ -184,12 +199,13 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
     theme = gr.themes.Base(primary_hue="violet", secondary_hue="blue", neutral_hue="slate",
                            font=[gr.themes.GoogleFont("Inter"), "Segoe UI", "sans-serif"])
     with gr.Blocks(title=f"{APP_NAME} — {t(SLOGAN)}") as demo:
-        demo.mars_theme, demo.mars_css, demo.mars_js = theme, CSS_FILE.read_text(encoding="utf-8"), FORCE_DARK_JS
+        demo.mars_theme, demo.mars_css = theme, CSS_FILE.read_text(encoding="utf-8")
+        demo.mars_js = theme_js(s.theme)
         gr.HTML(f"<div id='mars-header'><h1>{APP_NAME}</h1><p>{t(SLOGAN)}</p></div>")
         with gr.Row():
             with gr.Column(scale=0, min_width=200, elem_id="mars-sidebar"):
                 nav_buttons = [gr.Button(f"{i}  {t(p)}", size="sm") for i, p in zip(ICONS, PAGES)]
-                gr.HTML("<hr style='border-color:#262640'>")
+                gr.HTML("<hr class='mars-sep'>")
                 mem_btn = gr.Button(t("🧹 Liberar memoria"), size="sm")
                 mem_msg = gr.Markdown(elem_classes="mars-muted")
             with gr.Column(scale=5):
@@ -704,7 +720,9 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                         c_lang = gr.Dropdown([(v, k) for k, v in LANGUAGES.items()], value=get_language(),
                                              label=t("Idioma"),
                                              info=t("El cambio se aplica al reiniciar MARS.AI."))
-                        gr.Dropdown([(t("Oscuro (MARS)"), "oscuro")], value="oscuro", label=t("Tema"))
+                        c_theme = gr.Dropdown([(t(v), k) for k, v in THEMES.items()],
+                                              value=s.theme if s.theme in THEMES else "oscuro", label=t("Tema"),
+                                              info=t("Se aplica al instante al guardar."))
                         c_out = gr.Textbox(str(s.output_path), label=t("Carpeta de imágenes"))
                         c_mod = gr.Textbox(str(s.models_path), label=t("Carpeta de modelos"))
                     with gr.Tab(t("Generación")):
@@ -747,7 +765,7 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                     c_save = gr.Button(t("💾 Guardar configuración"), variant="primary")
                     c_msg = gr.Markdown()
 
-                    def save_cfg(lang, out, mod, style, steps, cfg, res, asp, low, unl, batch, tok, tok_del, hfm,
+                    def save_cfg(lang, theme, out, mod, style, steps, cfg, res, asp, low, unl, batch, tok, tok_del, hfm,
                                  cost):
                         for label, pth in ((t("imágenes"), out), (t("modelos"), mod)):
                             try:
@@ -755,7 +773,7 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                             except OSError as exc:
                                 return t("❌ Carpeta de {label} no válida: {err}", label=label, err=exc), gr.update()
                         lang_changed = lang != ctx.settings.language
-                        ctx.store.update(language=lang, output_dir=out, models_dir=mod, default_style=style,
+                        ctx.store.update(language=lang, theme=theme if theme in THEMES else "oscuro", output_dir=out, models_dir=mod, default_style=style,
                                          default_steps=int(steps), default_cfg=float(cfg), default_resolution=int(res),
                                          default_aspect=asp, low_power_mode=bool(low),
                                          unload_after_generation=bool(unl), max_batch=int(batch),
@@ -777,9 +795,10 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                                 msg += " " + t("❌ No se pudo guardar el token (almacén seguro no disponible).")
                         ctx.models.unload()  # aplica cambios de memoria / API
                         return msg, token_line()
-                    c_save.click(save_cfg, [c_lang, c_out, c_mod, c_style, c_steps, c_cfg, c_res, c_asp, c_low,
+                    c_save.click(save_cfg, [c_lang, c_theme, c_out, c_mod, c_style, c_steps, c_cfg, c_res, c_asp, c_low,
                                             c_unl, c_batch, c_tok, c_tok_del, c_hfm, c_cost], [c_msg, tok_state]) \
-                        .then(lambda: "", None, c_tok)
+                        .then(lambda: "", None, c_tok) \
+                        .then(None, c_theme, None, js="(th) => { window.marsApplyTheme(th); return []; }")
 
         # ================================================== navegación
         page_cols = [pages[p] for p in PAGES]

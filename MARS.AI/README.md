@@ -47,7 +47,8 @@ Ten en cuenta estas limitaciones:
 - GFPGAN reconstruye las caras: con una intensidad alta puede cambiar ligeramente los rasgos.
   Una intensidad de 0,5–0,7 conserva mejor la identidad.
 - La interfaz está en **español e inglés** (*Configuración → General → Idioma*; se aplica al reiniciar).
-  El tema es solo el oscuro.
+- Tema **oscuro**, **claro** o **sistema** (sigue el modo de Windows) en *Configuración → General → Tema*;
+  se aplica al instante al guardar.
 
 ## Modelos
 

@@ -181,3 +181,12 @@ def test_bg_remover_real_models(model_id):
     assert br.remove(img, model_id, "mascara").mode == "RGB"
     hard = np.asarray(br.remove(img, model_id, threshold=128).getchannel("A"))
     assert set(np.unique(hard)) <= {0, 255}
+
+
+def test_theme_js_and_setting(tmp_path):
+    from interface.app import THEMES, theme_js
+    assert set(THEMES) == {"oscuro", "claro", "sistema"}
+    assert "marsApplyTheme('claro')" in theme_js("claro")
+    assert "marsApplyTheme('oscuro')" in theme_js("<script>malo")   # valores no válidos -> oscuro
+    ctx = AppContext(tmp_path, system=fake_system())
+    assert ctx.settings.theme == "oscuro"
