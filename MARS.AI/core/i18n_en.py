@@ -501,4 +501,22 @@ EN: dict[str, str] = {
         "**Prompt:** {prompt}\n\n**Negative:** {neg}\n\n**Style:** {style} · **Model:** {model} · **Resolution:** "
         "{res} · **Aspect:** {aspect} · **Steps:** {steps} · **CFG:** {cfg} · **Seed:** {seed} (last used: {last})"
         "\n\n**Uses:** {uses} · **Last used:** {date}",
+
+    # ------------------------------------------------- exportación a ZIP
+    "📦 Exportar a ZIP": "📦 Export to ZIP",
+    "Exporta las imágenes que coinciden con la búsqueda y las fechas de arriba (todas, no solo las visibles), con "
+    "sus prompts y ajustes.":
+        "Exports the images that match the search and dates above (all of them, not just the visible ones), with "
+        "their prompts and settings.",
+    "Incluir datos de cada imagen (metadata.csv y metadata.json)":
+        "Include each image's details (metadata.csv and metadata.json)",
+    "📦 Crear ZIP": "📦 Create ZIP",
+    "ZIP listo para descargar": "ZIP ready to download",
+    "⚠️ No hay imágenes que exportar con los filtros actuales.": "⚠️ There are no images to export with the current filters.",
+    "No hay imágenes que exportar con los filtros actuales.": "There are no images to export with the current filters.",
+    "⏳ Preparando {n} imagen(es) (~{mb} MB)…": "⏳ Preparing {n} image(s) (~{mb} MB)…",
+    "Exportando": "Exporting",
+    "Exportación cancelada.": "Export cancelled.",
+    "✅ ZIP creado en {secs} s · {n} imagen(es) · {mb} MB": "✅ ZIP created in {secs} s · {n} image(s) · {mb} MB",
+    "No hay espacio suficiente en el disco para el ZIP (~{mb} MB).": "Not enough disk space for the ZIP (~{mb} MB).",
 }

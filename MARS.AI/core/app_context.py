@@ -37,6 +37,11 @@ class AppContext:
         self.faces = FaceRestorer(s.models_path)
         self.faces_cancel = threading.Event()
         self.bgremover = BackgroundRemover(s.models_path)
+        self.export_cancel = threading.Event()
+
+    @property
+    def exports_dir(self) -> Path:
+        return self.store.data_dir / "exports"
 
     def free_memory(self) -> str:
         self.models.unload()

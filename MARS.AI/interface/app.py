@@ -12,6 +12,7 @@ from config.settings import APP_NAME, SLOGAN
 from core.app_context import AppContext
 from core.i18n import LANGUAGES, N_, get_language, t
 from core.system_info import format_report
+from gallery.exporter import estimate_size, export_zip
 from gallery.library import load_user_image
 from generator.engine import ASPECTS, RESOLUTIONS, GenerationJob, build_request
 from generator.prompt_enhancer import enhance_prompt
@@ -484,6 +485,45 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                     gal.select(select, ids, [sel_id, details, dl_btn])
                     fav_btn.click(fav, [sel_id] + flt, [gal, ids, details])
                     del_btn.click(delete, [sel_id, del_ok] + flt, [gal, ids, details, sel_id, del_ok])
+
+                    # ------------------------------------------ exportar a ZIP
+                    with gr.Accordion(t("📦 Exportar a ZIP"), open=False):
+                        gr.Markdown(t("Exporta las imágenes que coinciden con la búsqueda y las fechas de arriba "
+                                      "(todas, no solo las visibles), con sus prompts y ajustes."))
+                        with gr.Row():
+                            x_meta = gr.Checkbox(True, label=t("Incluir datos de cada imagen (metadata.csv y "
+                                                               "metadata.json)"))
+                            x_btn = gr.Button(t("📦 Crear ZIP"), variant="primary")
+                            x_cancel = gr.Button(t("⛔ Cancelar"))
+                        x_prog = gr.HTML()
+                        x_file = gr.File(label=t("ZIP listo para descargar"), interactive=False)
+
+                    def do_export(text, dfrom, dto, meta):
+                        recs = ctx.library.search(text or "", favorites, dfrom or "", dto or "", limit=1_000_000)
+                        if not recs:
+                            yield progress_html(0, 1, t("⚠️ No hay imágenes que exportar con los filtros "
+                                                        "actuales.")), None
+                            return
+                        mb = estimate_size(recs) / 1024**2
+                        yield progress_html(0, len(recs), t("⏳ Preparando {n} imagen(es) (~{mb} MB)…", n=len(recs),
+                                                            mb=f"{mb:.1f}")), None
+                        for html, state, secs in threaded_tool(
+                                lambda prog, cancel: export_zip(recs, ctx.exports_dir, bool(meta), prog, cancel),
+                                t("Exportando"), "export_cancel"):
+                            if html is not None:
+                                yield html, None
+                        if state["err"]:
+                            yield progress_html(0, 1, f"⛔ {state['err']}" if state["err"] == t("Exportación cancelada.")
+                                                else f"❌ {state['err']}"), None
+                            return
+                        path, n = state["res"]
+                        yield progress_html(1, 1, t("✅ ZIP creado en {secs} s · {n} imagen(es) · {mb} MB",
+                                                    secs=secs, n=n,
+                                                    mb=f"{path.stat().st_size / 1024**2:.1f}")), str(path)
+
+                    x_btn.click(do_export, flt + [x_meta], [x_prog, x_file])
+                    x_cancel.click(lambda: (ctx.export_cancel.set(),
+                                            progress_html(0, 1, t("⛔ Cancelando…")))[1], None, x_prog)
                     return refresh, flt, [gal, ids, details]
 
                 with gr.Column(visible=False) as pages["Mis creaciones"]:
