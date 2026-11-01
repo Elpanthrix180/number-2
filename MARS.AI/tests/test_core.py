@@ -160,3 +160,13 @@ def test_paths_follow_data_dir(tmp_path):
     st = SettingsStore(tmp_path)
     assert st.settings.models_path == tmp_path / "models"
     assert st.settings.output_path == tmp_path / "outputs"
+
+
+def test_library_search_is_literal(tmp_path):
+    lib = Library(Database(tmp_path / "t.db"), tmp_path / "out")
+    lib.save(Image.new("RGB", (8, 8)), prompt="gato 100% feliz", model="SD 1.5")
+    lib.save(Image.new("RGB", (8, 8)), prompt="perro_azul", model="SD 1.5")
+    lib.save(Image.new("RGB", (8, 8)), prompt="otra cosa", model="SD 1.5")
+    assert [r.prompt for r in lib.search("%")] == ["gato 100% feliz"]
+    assert [r.prompt for r in lib.search("_")] == ["perro_azul"]
+    assert len(lib.search("")) == 3

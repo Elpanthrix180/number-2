@@ -89,6 +89,7 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                                         secs=f"{res.seconds:.1f}", seed=res.seed)), res.images, job
 
     def generate(prompt, negative, model_id, style, res, aspect, n, seed, steps, cfg, auto_enhance):
+        original_prompt, original_negative = prompt, negative
         try:
             spec = ctx.models.spec(model_id)
             p = enhance_prompt(prompt, translate=translate_default) if auto_enhance else prompt
@@ -111,7 +112,25 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                                            style=style, steps=req.steps, cfg=req.cfg, seed=job.result.seed,
                                            kind="txt2img", seconds=round(job.result.seconds, 1))
                     paths.append((rec.file_path, rec.caption()))
+                ctx.prompts.record(original_prompt, original_negative, style, model_id, int(res), aspect,
+                                   req.steps, req.cfg, int(seed), job.result.seed)
                 yield html, paths, recent_gallery()
+
+    def history_choices(q: str = "", pinned_only: bool = False):
+        return [(f"{e.title()} · {t(e.style) if e.style else '—'} · ×{e.uses}", e.id)
+                for e in ctx.prompts.search(q or "", bool(pinned_only))]
+
+    def history_details(e) -> str:
+        try:
+            model_name = t(ctx.models.spec(e.model).name)
+        except KeyError:
+            model_name = e.model or "—"
+        return t("**Prompt:** {prompt}\n\n**Negativo:** {neg}\n\n**Estilo:** {style} · **Modelo:** {model} · "
+                 "**Resolución:** {res} · **Aspecto:** {aspect} · **Steps:** {steps} · **CFG:** {cfg} · "
+                 "**Seed:** {seed} (última usada: {last})\n\n**Usos:** {uses} · **Último uso:** {date}",
+                 prompt=e.prompt, neg=e.negative or "—", style=t(e.style) if e.style else "—", model=model_name,
+                 res=e.resolution, aspect=e.aspect, steps=e.steps, cfg=e.cfg, seed=e.seed, last=e.last_seed,
+                 uses=e.uses, date=e.last_used)
 
     def recent_gallery():
         return [(r.file_path, r.caption()) for r in ctx.library.search(limit=12)]
@@ -246,10 +265,11 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                                          format="png", object_fit="contain")
 
                     res.change(lambda r: gr.update(visible=(r == 0)), res, custom_res)
-                    style.change(lambda st: (gr.update(value=get_style(st).steps),
+                    style.input(lambda st: (gr.update(value=get_style(st).steps),
                                              gr.update(value=get_style(st).cfg),
                                              gr.update(value=get_style(st).aspect)) if st != "Ninguno"
                                  else (gr.update(), gr.update(), gr.update()), style, [steps, cfg, aspect])
+                    # .input (y no .change): así rellenar desde el historial no pisa los ajustes guardados
 
                     def on_model(mid):
                         try:
@@ -259,11 +279,98 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                         return (gr.update(value=sp.default_steps), gr.update(value=sp.default_cfg),
                                 gr.update(value=sp.default_resolution if sp.default_resolution in RESOLUTIONS
                                           else 512))
-                    model.change(on_model, model, [steps, cfg, res])
+                    model.input(on_model, model, [steps, cfg, res])
                     enh_btn.click(lambda p: enhance_prompt(p, translate=translate_default), prompt, prompt)
+
+                    # ------------------------------------------ historial de prompts
+                    with gr.Accordion(t("📜 Historial de prompts"), open=False):
+                        with gr.Row():
+                            h_q = gr.Textbox(label=t("Buscar en el historial"), scale=3)
+                            h_pin_only = gr.Checkbox(False, label=t("Solo fijados"), scale=1)
+                        h_sel = gr.Dropdown(history_choices(), value=None, label=t("Prompt guardado"),
+                                            allow_custom_value=False)
+                        h_info = gr.Markdown(t("Elige un prompt para ver sus ajustes."))
+                        with gr.Row():
+                            h_use = gr.Button(t("↩️ Usar"), variant="primary")
+                            h_use_seed = gr.Button(t("🎲 Usar con la misma seed"))
+                            h_pin = gr.Button(t("📌 Fijar / soltar"))
+                            h_del = gr.Button(t("🗑️ Eliminar"), variant="stop")
+                        with gr.Row():
+                            h_name = gr.Textbox(label=t("Nombre (opcional)"), scale=3)
+                            h_rename = gr.Button(t("✏️ Guardar nombre"), scale=1)
+                        with gr.Row():
+                            h_clear_ok = gr.Checkbox(False, label=t("Confirmo borrar el historial (los fijados se "
+                                                                    "conservan)"))
+                            h_clear = gr.Button(t("🧹 Borrar historial"))
+                        h_msg = gr.Markdown()
+
+                    def h_refresh(q, pin_only, keep=None):
+                        ch = history_choices(q, pin_only)
+                        ids = {v for _, v in ch}
+                        return gr.update(choices=ch, value=keep if keep in ids else None)
+
+                    def h_show(eid):
+                        e = ctx.prompts.get(eid) if eid is not None else None
+                        if e is None:
+                            return t("Elige un prompt para ver sus ajustes."), ""
+                        return history_details(e), e.name
+
+                    def h_apply(eid, same_seed):
+                        e = ctx.prompts.get(eid) if eid is not None else None
+                        if e is None:
+                            return [gr.update()] * 10 + [t("Elige un prompt primero.")]
+                        known = {sp.id for sp in ctx.models.all_specs()}
+                        in_list = e.resolution in RESOLUTIONS
+                        seed_val = (e.last_seed if e.last_seed >= 0 else e.seed) if same_seed else e.seed
+                        return [e.prompt, e.negative, e.style or "Ninguno",
+                                e.model if e.model in known else gr.update(),
+                                e.resolution if in_list else 0,
+                                gr.update(value=e.resolution, visible=not in_list),
+                                e.aspect if e.aspect in ASPECTS else gr.update(), e.steps, e.cfg, seed_val,
+                                t("✅ Prompt cargado. Pulsa «GENERAR IMAGEN».")]
+
+                    apply_out = [prompt, negative, style, model, res, custom_res, aspect, steps, cfg, seed, h_msg]
+                    flt = [h_q, h_pin_only]
+                    h_q.submit(h_refresh, flt, h_sel)
+                    h_q.change(h_refresh, flt, h_sel)
+                    h_pin_only.change(h_refresh, flt, h_sel)
+                    h_sel.change(h_show, h_sel, [h_info, h_name])
+                    h_use.click(lambda i: h_apply(i, False), h_sel, apply_out)
+                    h_use_seed.click(lambda i: h_apply(i, True), h_sel, apply_out)
+
+                    def h_toggle(eid, q, pin_only):
+                        if eid is None:
+                            return gr.update(), t("Elige un prompt primero.")
+                        pinned = ctx.prompts.toggle_pin(eid)
+                        return h_refresh(q, pin_only, eid), t("📌 Fijado: no se borrará.") if pinned else t("Soltado.")
+                    h_pin.click(h_toggle, [h_sel] + flt, [h_sel, h_msg])
+
+                    def h_delete(eid, q, pin_only):
+                        if eid is None:
+                            return gr.update(), t("Elige un prompt primero.")
+                        ctx.prompts.delete(eid)
+                        return h_refresh(q, pin_only), t("🗑️ Prompt eliminado del historial.")
+                    h_del.click(h_delete, [h_sel] + flt, [h_sel, h_msg])
+
+                    def h_save_name(eid, name, q, pin_only):
+                        if eid is None:
+                            return gr.update(), t("Elige un prompt primero.")
+                        ctx.prompts.rename(eid, name)
+                        return h_refresh(q, pin_only, eid), t("✅ Nombre guardado.")
+                    h_rename.click(h_save_name, [h_sel, h_name] + flt, [h_sel, h_msg])
+
+                    def h_clear_all(ok, q, pin_only):
+                        if not ok:
+                            return gr.update(), t("⚠️ Marca la casilla para confirmar."), False
+                        n_del = ctx.prompts.clear(keep_pinned=True)
+                        return h_refresh(q, pin_only), t("🧹 {n} prompt(s) borrado(s). Los fijados se conservan.",
+                                                         n=n_del), False
+                    h_clear.click(h_clear_all, [h_clear_ok] + flt, [h_sel, h_msg, h_clear_ok])
+
                     return dict(prompt=prompt, negative=negative, style=style, model=model, res=res,
                                 custom_res=custom_res, aspect=aspect, n=n, seed=seed, steps=steps, cfg=cfg,
-                                auto=auto_enh, gen=gen_btn, cancel=cancel_btn, status=status, preview=preview)
+                                auto=auto_enh, gen=gen_btn, cancel=cancel_btn, status=status, preview=preview,
+                                h_sel=h_sel, h_q=h_q, h_pin_only=h_pin_only, h_refresh=h_refresh)
 
                 with gr.Column(visible=True) as pages["Inicio"]:
                     home = generator_panel(full=False)
@@ -283,9 +390,11 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                     def _gen(prompt, negative, model_id, style, r, c, aspect, n, seed, steps, cfg, auto):
                         yield from generate(prompt, negative, model_id, style, _res(r, c), aspect, n, seed,
                                             steps, cfg, auto)
-                    panel["gen"].click(_gen, inputs + [panel[k] for k in ("res", "custom_res", "aspect", "n",
-                                                                           "seed", "steps", "cfg", "auto")],
-                                       [panel["status"], panel["preview"], recent])
+                    ev = panel["gen"].click(_gen, inputs + [panel[k] for k in ("res", "custom_res", "aspect", "n",
+                                                                                "seed", "steps", "cfg", "auto")],
+                                            [panel["status"], panel["preview"], recent])
+                    for other in (home, create):
+                        ev.then(other["h_refresh"], [other["h_q"], other["h_pin_only"]], other["h_sel"])
                     panel["cancel"].click(lambda: progress_html(0, 1, ctx.cancel_current()), None, panel["status"])
 
                 # ---------------------------------------------- Estilos
@@ -816,9 +925,14 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                 ev.then(lambda m: (table(), info(m)), msel, [mtable, minfo])
             elif name == "Inicio":
                 ev.then(recent_gallery, None, recent)
+            if name in ("Inicio", "Crear imagen"):
+                p = home if name == "Inicio" else create
+                ev.then(p["h_refresh"], [p["h_q"], p["h_pin_only"]], p["h_sel"])
 
-        use_btn.click(lambda st, ex: [*show("Crear imagen"), ex, st], [ex_style, ex_prompt],
-                      page_cols + [create["prompt"], create["style"]])
+        use_btn.click(lambda st, ex: [*show("Crear imagen"), ex, st, get_style(st).steps, get_style(st).cfg,
+                                      get_style(st).aspect], [ex_style, ex_prompt],
+                      page_cols + [create["prompt"], create["style"], create["steps"], create["cfg"],
+                                   create["aspect"]])
         mem_btn.click(ctx.free_memory, None, mem_msg)
         demo.load(lambda m: (table(), info(m)), msel, [mtable, minfo])
     return demo
