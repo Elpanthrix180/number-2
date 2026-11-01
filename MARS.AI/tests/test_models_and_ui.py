@@ -145,3 +145,39 @@ def test_face_restore_real_weights():
     if face is not None:
         with pytest.raises(InterruptedError):
             fr.restore(face, cancel=ev)
+
+
+BGM = "/tmp/claude-0/bgm"
+
+
+def test_bg_remover_requires_authorization(tmp_path):
+    from PIL import Image
+    from tools.background_remover import BackgroundRemover, _parse_color
+    br = BackgroundRemover(tmp_path)
+    assert "autorización" in br.download("rapido", False)
+    assert "desconocido" in br.download("nope", True)
+    assert not (tmp_path / "background").exists()
+    with pytest.raises(RuntimeError):
+        br.remove(Image.new("RGB", (32, 32)), "rapido")
+    assert _parse_color("#0f0") == (0, 255, 0, 255)
+    assert _parse_color("rgb(1, 2, 3)") == (1, 2, 3, 255)
+    assert _parse_color("basura") == (255, 255, 255, 255)
+
+
+@pytest.mark.skipif(not os.path.isdir(BGM), reason="modelos de quitafondos no disponibles")
+@pytest.mark.parametrize("model_id", ["rapido", "calidad"])
+def test_bg_remover_real_models(model_id):
+    import numpy as np
+    from PIL import Image, ImageDraw
+    from tools.background_remover import BackgroundRemover
+    img = Image.new("RGB", (300, 200), (235, 235, 235))
+    ImageDraw.Draw(img).ellipse((100, 50, 200, 150), fill=(200, 30, 30))
+    br = BackgroundRemover(BGM)
+    out = br.remove(img, model_id)
+    a = np.asarray(out.getchannel("A"))
+    assert out.mode == "RGBA" and out.size == img.size
+    assert a[100, 150] > 200 and a[10, 10] < 50       # objeto opaco, esquina transparente
+    assert br.remove(img, model_id, "color", "#0000ff").getpixel((5, 5)) == (0, 0, 255)
+    assert br.remove(img, model_id, "mascara").mode == "RGB"
+    hard = np.asarray(br.remove(img, model_id, threshold=128).getchannel("A"))
+    assert set(np.unique(hard)) <= {0, 255}

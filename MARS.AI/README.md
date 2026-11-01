@@ -37,7 +37,7 @@ Si solo quieres el diagnóstico del equipo, sin instalar nada: `python check_sys
 | Upscaler, mejora de imagen y restauración (clásicos) | ✅ | Ninguno (Pillow) |
 | Mejorar prompt | ✅ | Ninguno (diccionario local ES→EN y calificadores) |
 | Image to Image, Variaciones, Inpainting, Outpainting | ✅ | Un modelo **local** instalado |
-| Quitar fondo | ⚙️ opcional | `install_optional_tools.bat` (rembg) |
+| Quitar fondo con IA (U²-Netp rápido o IS-Net de calidad, Apache 2.0) | ✅ | Descarga única de ~4,6 MB o ~179 MB con tu autorización, verificada con SHA-256 |
 | Administrador de modelos: estado, compatibilidad, espacio, descarga autorizada, borrar, añadir `.safetensors` | ✅ | — |
 | Modo de bajo consumo y liberar memoria | ✅ | — |
 
@@ -94,6 +94,7 @@ MARS.AI/
   tools/image_tools.py    upscaler, mejora, restauración, quitar fondo, utilidades de inpaint y outpaint
   tools/realesrgan.py     upscaler con IA (Real-ESRGAN)
   tools/face_restore.py   restauración de caras (GFPGAN + YuNet)
+  tools/background_remover.py  quitafondos con IA (U²-Netp / IS-Net con OpenCV)
   tools/gfpgan_arch/      arquitectura de GFPGAN (Apache 2.0, con su licencia)
   gallery/library.py      biblioteca de imágenes
   database/db.py          SQLite

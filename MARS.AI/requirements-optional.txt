@@ -1,2 +1,0 @@
-# Opcional: quitar fondos con IA (descarga un modelo U2Net de ~170 MB la primera vez).
-rembg[cpu]>=2.0.50
