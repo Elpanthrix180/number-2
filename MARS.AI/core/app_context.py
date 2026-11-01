@@ -14,6 +14,7 @@ from models.manager import ModelManager
 from tools.background_remover import BackgroundRemover
 from tools.face_restore import FaceRestorer
 from tools.realesrgan import RealESRGAN
+from core.i18n import set_language, t
 
 log = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class AppContext:
         self.store = SettingsStore(data_dir)
         self.secrets = SecretStore()
         s = self.store.settings
+        set_language(s.language)
         self.system = system or collect(str(self.store.data_dir))
         self.db = Database(self.store.data_dir / "marsai.db")
         self.library = Library(self.db, s.output_path)
@@ -39,7 +41,7 @@ class AppContext:
         self.upscaler.unload()
         self.faces.unload()
         self.bgremover.unload()
-        return "Memoria liberada (difusión, Real-ESRGAN, GFPGAN y quitafondos)."
+        return t("Memoria liberada (difusión, Real-ESRGAN, GFPGAN y quitafondos).")
 
     @property
     def settings(self):
@@ -48,5 +50,5 @@ class AppContext:
     def cancel_current(self) -> str:
         if self.current_job and not self.current_job.done:
             self.current_job.cancel()
-            return "Cancelando… (se detendrá al terminar el paso actual)"
-        return "No hay ninguna generación en curso."
+            return t("Cancelando… (se detendrá al terminar el paso actual)")
+        return t("No hay ninguna generación en curso.")

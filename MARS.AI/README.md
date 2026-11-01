@@ -46,7 +46,8 @@ Ten en cuenta estas limitaciones:
   y para ampliar, *Herramientas → Upscaler IA* (Real-ESRGAN).
 - GFPGAN reconstruye las caras: con una intensidad alta puede cambiar ligeramente los rasgos.
   Una intensidad de 0,5–0,7 conserva mejor la identidad.
-- El idioma de la interfaz es solo el español y el tema es solo el oscuro.
+- La interfaz está en **español e inglés** (*Configuración → General → Idioma*; se aplica al reiniciar).
+  El tema es solo el oscuro.
 
 ## Modelos
 
@@ -88,6 +89,8 @@ MARS.AI/
   check_system.py         diagnóstico del equipo
   install_windows.bat     instalador · run_windows.bat lanzador
   config/settings.py      ajustes (JSON) y claves seguras (keyring)
+  core/i18n.py            traducción de la interfaz (texto en español como clave)
+  core/i18n_en.py         traducciones al inglés
   core/                   diagnóstico, registros con ocultación de claves, contexto de la app
   generator/              estilos, motor (hilos, progreso, cancelación), potenciador de prompts
   models/                 catálogo, backends (Diffusers y API de HF), administrador
@@ -107,3 +110,8 @@ MARS.AI/
 pip install -r requirements.txt pytest
 python -m pytest -q tests
 ```
+
+### Traducciones
+Los textos visibles se marcan con `t("texto en español")` (o `N_()` en datos que se traducen al mostrarlos).
+Para añadir o cambiar una traducción al inglés, edita `core/i18n_en.py`. `tests/test_i18n.py` falla si falta
+alguna traducción, si sobra alguna o si no coinciden los marcadores `{...}`.

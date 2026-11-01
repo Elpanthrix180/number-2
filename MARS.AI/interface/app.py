@@ -7,10 +7,10 @@ import time
 from pathlib import Path
 
 import gradio as gr
-from PIL import Image
 
 from config.settings import APP_NAME, SLOGAN
 from core.app_context import AppContext
+from core.i18n import LANGUAGES, N_, get_language, t
 from core.system_info import format_report
 from gallery.library import load_user_image
 from generator.engine import ASPECTS, RESOLUTIONS, GenerationJob, build_request
@@ -24,8 +24,9 @@ from tools import realesrgan as RE
 
 log = logging.getLogger(__name__)
 CSS_FILE = Path(__file__).with_name("theme.css")
-PAGES = ["Inicio", "Crear imagen", "Explorar estilos", "Mis creaciones", "Favoritos",
-         "Herramientas", "Modelos IA", "Configuración"]
+# Claves internas de las páginas (se muestran traducidas con t()).
+PAGES = [N_("Inicio"), N_("Crear imagen"), N_("Explorar estilos"), N_("Mis creaciones"), N_("Favoritos"),
+         N_("Herramientas"), N_("Modelos IA"), N_("Configuración")]
 ICONS = ["🏠", "✨", "🎨", "🖼️", "⭐", "🛠️", "🧠", "⚙️"]
 FORCE_DARK_JS = """() => { document.body.classList.add('dark');
   const u = new URL(window.location); if (u.searchParams.get('__theme') !== 'dark') {
@@ -40,8 +41,13 @@ def progress_html(step: int, total: int, label: str) -> str:
             f"transition:width .3s'></div></div>")
 
 
+def style_choices() -> list[tuple[str, str]]:
+    return [(t(n), n) for n in style_names()]
+
+
 def build_ui(ctx: AppContext) -> gr.Blocks:
     s = ctx.settings
+    translate_default = get_language() == "es"
 
     # =========================================================== helpers
     def model_choices():
@@ -53,32 +59,34 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
         ctx.current_job = job
         while not job.done:
             yield progress_html(job.step, job.total,
-                                f"⏳ {label}: paso {job.step}/{job.total} · {job.elapsed:.1f} s"), None, job
+                                t("⏳ {label}: paso {step}/{total} · {secs} s", label=label, step=job.step,
+                                  total=job.total, secs=f"{job.elapsed:.1f}")), None, job
             time.sleep(0.4)
         res = job.result
         if ctx.settings.unload_after_generation:
             ctx.models.unload()
         if res.cancelled:
-            yield progress_html(0, 1, f"⛔ Cancelado tras {res.seconds:.1f} s"), None, job
+            yield progress_html(0, 1, t("⛔ Cancelado tras {secs} s", secs=f"{res.seconds:.1f}")), None, job
         elif res.error:
             yield progress_html(0, 1, f"❌ {res.error}"), None, job
         else:
-            yield progress_html(1, 1, f"✅ {label}: terminado en {res.seconds:.1f} s · seed {res.seed}"), \
-                res.images, job
+            yield progress_html(1, 1, t("✅ {label}: terminado en {secs} s · seed {seed}", label=label,
+                                        secs=f"{res.seconds:.1f}", seed=res.seed)), res.images, job
 
     def generate(prompt, negative, model_id, style, res, aspect, n, seed, steps, cfg, auto_enhance):
         try:
             spec = ctx.models.spec(model_id)
-            p = enhance_prompt(prompt) if auto_enhance else prompt
+            p = enhance_prompt(prompt, translate=translate_default) if auto_enhance else prompt
             req = build_request(p, negative, style, int(res), aspect, int(n), int(seed), int(steps), float(cfg),
                                 max_side=spec.max_resolution, max_batch=ctx.settings.max_batch)
             backend = ctx.models.backend(model_id)
         except (ValueError, BackendUnavailable, KeyError) as exc:
             yield progress_html(0, 1, f"❌ {exc}"), gr.update(), gr.update()
             return
-        yield progress_html(0, req.steps, f"Preparando {spec.name} ({req.width}×{req.height})… "
-                            "la primera vez puede tardar en cargar el modelo."), gr.update(), gr.update()
-        for html, images, job in run_job(backend, req, "Generación"):
+        yield progress_html(0, req.steps, t("Preparando {name} ({w}×{h})… la primera vez puede tardar en "
+                                            "cargar el modelo.", name=t(spec.name), w=req.width, h=req.height)), \
+            gr.update(), gr.update()
+        for html, images, job in run_job(backend, req, t("Generación")):
             if images is None:
                 yield html, gr.update(), gr.update()
             else:
@@ -98,16 +106,16 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
         try:
             spec = ctx.models.spec(model_id)
             if spec.connection == "hf-api":
-                raise BackendUnavailable("Esta herramienta necesita un modelo local instalado (no la API).")
+                raise BackendUnavailable(t("Esta herramienta necesita un modelo local instalado (no la API)."))
             backend = ctx.models.backend(model_id)
             mode = "img2img" if kind in ("img2img", "variations") else "inpaint"
             if not backend.supports(mode):
-                raise BackendUnavailable(f"{spec.name} no admite {mode}.")
+                raise BackendUnavailable(t("{name} no admite {mode}.", name=t(spec.name), mode=mode))
             mask = None
             if kind == "inpaint":
                 image, mask = T.mask_from_editor(image)
             elif image is None:
-                raise ValueError("Sube una imagen de referencia.")
+                raise ValueError(t("Sube una imagen de referencia."))
             if kind == "outpaint":
                 image, mask = T.prepare_outpaint(load_user_image(image), *extra)
             image = load_user_image(image)
@@ -139,28 +147,50 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
 
     def classic_tool(fn, image, *args, kind="tool"):
         if image is None:
-            return None, "❌ Sube una imagen primero."
+            return None, t("❌ Sube una imagen primero.")
         try:
             t0 = time.perf_counter()
             out = fn(load_user_image(image), *args)
-            model = "Quitafondos IA" if kind == "nobg" else "Herramienta clásica"
+            model = N_("Quitafondos IA") if kind == "nobg" else N_("Herramienta clásica")
             rec = ctx.library.save(out, prompt=f"[{kind}]", model=model, kind=kind,
                                    seconds=round(time.perf_counter() - t0, 2))
-            return out, f"✅ Listo en {rec.seconds} s · {out.width}×{out.height} · guardado como #{rec.id}"
+            return out, t("✅ Listo en {secs} s · {w}×{h} · guardado como #{id}", secs=rec.seconds,
+                          w=out.width, h=out.height, id=rec.id)
         except Exception as exc:  # noqa: BLE001
             return None, f"❌ {exc}"
+
+    def threaded_tool(work_fn, label: str, cancel_attr: str):
+        """Ejecuta work_fn(progress, cancel) en un hilo y emite el progreso. Devuelve el resultado al final."""
+        state = {"step": 0, "total": 1, "res": None, "err": None}
+        cancel = threading.Event()
+        setattr(ctx, cancel_attr, cancel)
+        t0 = time.perf_counter()
+
+        def work():
+            try:
+                state["res"] = work_fn(lambda a, b: state.update(step=a, total=b), cancel)
+            except Exception as exc:  # noqa: BLE001
+                state["err"] = str(exc)
+        th = threading.Thread(target=work, daemon=True)
+        th.start()
+        while th.is_alive():
+            yield progress_html(state["step"], state["total"],
+                                f"⏳ {label}: {state['step']}/{state['total']} · "
+                                f"{time.perf_counter() - t0:.1f} s"), None, None
+            time.sleep(0.5)
+        yield None, state, round(time.perf_counter() - t0, 1)
 
     # ============================================================== UI
     theme = gr.themes.Base(primary_hue="violet", secondary_hue="blue", neutral_hue="slate",
                            font=[gr.themes.GoogleFont("Inter"), "Segoe UI", "sans-serif"])
-    with gr.Blocks(title=f"{APP_NAME} — {SLOGAN}") as demo:
+    with gr.Blocks(title=f"{APP_NAME} — {t(SLOGAN)}") as demo:
         demo.mars_theme, demo.mars_css, demo.mars_js = theme, CSS_FILE.read_text(encoding="utf-8"), FORCE_DARK_JS
-        gr.HTML(f"<div id='mars-header'><h1>{APP_NAME}</h1><p>{SLOGAN}</p></div>")
+        gr.HTML(f"<div id='mars-header'><h1>{APP_NAME}</h1><p>{t(SLOGAN)}</p></div>")
         with gr.Row():
             with gr.Column(scale=0, min_width=200, elem_id="mars-sidebar"):
-                nav_buttons = [gr.Button(f"{i}  {p}", size="sm") for i, p in zip(ICONS, PAGES)]
+                nav_buttons = [gr.Button(f"{i}  {t(p)}", size="sm") for i, p in zip(ICONS, PAGES)]
                 gr.HTML("<hr style='border-color:#262640'>")
-                mem_btn = gr.Button("🧹 Liberar memoria", size="sm")
+                mem_btn = gr.Button(t("🧹 Liberar memoria"), size="sm")
                 mem_msg = gr.Markdown(elem_classes="mars-muted")
             with gr.Column(scale=5):
                 pages = {}
@@ -168,34 +198,35 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                 # ---------------------------------------------- Inicio / Crear
                 def generator_panel(full: bool):
                     with gr.Group(elem_classes="mars-card"):
-                        prompt = gr.Textbox(label="Descripción (prompt)", lines=4, elem_id="mars-prompt",
-                                            placeholder="Un panda guerrero con armadura futurista en una ciudad "
-                                                        "japonesa de noche, iluminación cinematográfica…")
-                        negative = gr.Textbox(label="Descripción negativa (lo que NO quieres)", lines=2,
-                                              visible=full, placeholder="borroso, deformado, texto…")
+                        prompt = gr.Textbox(label=t("Descripción (prompt)"), lines=4, elem_id="mars-prompt",
+                                            placeholder=t("Un panda guerrero con armadura futurista en una ciudad "
+                                                          "japonesa de noche, iluminación cinematográfica…"))
+                        negative = gr.Textbox(label=t("Descripción negativa (lo que NO quieres)"), lines=2,
+                                              visible=full, placeholder=t("borroso, deformado, texto…"))
                     with gr.Row():
-                        style = gr.Dropdown(style_names(), value=s.default_style, label="Estilo")
-                        model = gr.Dropdown(model_choices(), value=s.default_model, label="Modelo")
-                    with gr.Accordion("Configuración de generación", open=full):
+                        style = gr.Dropdown(style_choices(), value=s.default_style, label=t("Estilo"))
+                        model = gr.Dropdown(model_choices(), value=s.default_model, label=t("Modelo"))
+                    with gr.Accordion(t("Configuración de generación"), open=full):
                         with gr.Row():
-                            res = gr.Dropdown([(f"{r} × {r}", r) for r in RESOLUTIONS] + [("Personalizada…", 0)],
-                                              value=s.default_resolution, label="Resolución")
-                            custom_res = gr.Slider(256, 1536, value=640, step=64, label="Resolución personalizada",
+                            res = gr.Dropdown([(f"{r} × {r}", r) for r in RESOLUTIONS] + [(t("Personalizada…"), 0)],
+                                              value=s.default_resolution, label=t("Resolución"))
+                            custom_res = gr.Slider(256, 1536, value=640, step=64, label=t("Resolución personalizada"),
                                                    visible=False)
-                            aspect = gr.Dropdown(list(ASPECTS), value=s.default_aspect, label="Relación de aspecto")
-                            n = gr.Slider(1, 4, value=1, step=1, label="Número de imágenes")
+                            aspect = gr.Dropdown(list(ASPECTS), value=s.default_aspect, label=t("Relación de aspecto"))
+                            n = gr.Slider(1, 4, value=1, step=1, label=t("Número de imágenes"))
                         with gr.Row():
-                            seed = gr.Number(value=-1, precision=0, label="Seed (-1 = aleatorio)")
+                            seed = gr.Number(value=-1, precision=0, label=t("Seed (-1 = aleatorio)"))
                             steps = gr.Slider(1, 80, value=s.default_steps, step=1, label="Steps")
                             cfg = gr.Slider(0, 20, value=s.default_cfg, step=0.5, label="CFG Scale")
-                        auto_enh = gr.Checkbox(False, label="Mejorar prompt automáticamente (traduce al inglés y "
-                                                            "añade calidad)")
+                        auto_enh = gr.Checkbox(False, label=t("Mejorar prompt automáticamente (traduce al inglés y "
+                                                              "añade calidad)") if translate_default else
+                                               t("Mejorar prompt automáticamente (añade calidad)"))
                     with gr.Row():
-                        gen_btn = gr.Button("🚀 GENERAR IMAGEN", elem_id="mars-generate", scale=3)
-                        cancel_btn = gr.Button("⛔ CANCELAR", elem_id="mars-cancel", scale=1)
-                        enh_btn = gr.Button("🪄 Mejorar prompt", scale=1)
-                    status = gr.HTML(progress_html(0, 1, "Listo."))
-                    preview = gr.Gallery(label="Vista previa", columns=2, height=520 if full else 380,
+                        gen_btn = gr.Button(t("🚀 GENERAR IMAGEN"), elem_id="mars-generate", scale=3)
+                        cancel_btn = gr.Button(t("⛔ CANCELAR"), elem_id="mars-cancel", scale=1)
+                        enh_btn = gr.Button(t("🪄 Mejorar prompt"), scale=1)
+                    status = gr.HTML(progress_html(0, 1, t("Listo.")))
+                    preview = gr.Gallery(label=t("Vista previa"), columns=2, height=520 if full else 380,
                                          format="png", object_fit="contain")
 
                     res.change(lambda r: gr.update(visible=(r == 0)), res, custom_res)
@@ -213,19 +244,19 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                                 gr.update(value=sp.default_resolution if sp.default_resolution in RESOLUTIONS
                                           else 512))
                     model.change(on_model, model, [steps, cfg, res])
-                    enh_btn.click(enhance_prompt, prompt, prompt)
+                    enh_btn.click(lambda p: enhance_prompt(p, translate=translate_default), prompt, prompt)
                     return dict(prompt=prompt, negative=negative, style=style, model=model, res=res,
                                 custom_res=custom_res, aspect=aspect, n=n, seed=seed, steps=steps, cfg=cfg,
                                 auto=auto_enh, gen=gen_btn, cancel=cancel_btn, status=status, preview=preview)
 
                 with gr.Column(visible=True) as pages["Inicio"]:
                     home = generator_panel(full=False)
-                    gr.Markdown("### Creaciones recientes")
+                    gr.Markdown(t("### Creaciones recientes"))
                     recent = gr.Gallery(value=recent_gallery(), columns=4, height=320, format="png",
-                                        label="Recientes", object_fit="cover")
+                                        label=t("Recientes"), object_fit="cover")
 
                 with gr.Column(visible=False) as pages["Crear imagen"]:
-                    gr.Markdown("## ✨ Crear imagen")
+                    gr.Markdown(t("## ✨ Crear imagen"))
                     create = generator_panel(full=True)
 
                 for panel in (home, create):
@@ -243,25 +274,28 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
 
                 # ---------------------------------------------- Estilos
                 with gr.Column(visible=False) as pages["Explorar estilos"]:
-                    gr.Markdown("## 🎨 Explorar estilos\nElige una categoría, revisa sus ajustes y usa un ejemplo.")
+                    gr.Markdown(t("## 🎨 Explorar estilos\nElige una categoría, revisa sus ajustes y usa un ejemplo."))
                     cards = "".join(
-                        f"<div class='mars-style-card'><b>{st.icon} {st.name}</b><br>"
+                        f"<div class='mars-style-card'><b>{st.icon} {t(st.name)}</b><br>"
                         f"<span class='mars-muted'>Steps {st.steps} · CFG {st.cfg} · {st.aspect}</span><br>"
-                        f"<small>{st.examples[0]}</small></div>" for st in STYLES)
+                        f"<small>{t(st.examples[0])}</small></div>" for st in STYLES)
                     gr.HTML(f"<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));"
                             f"gap:10px'>{cards}</div>")
                     with gr.Row():
-                        ex_style = gr.Dropdown([st.name for st in STYLES], value=STYLES[0].name, label="Estilo")
-                        ex_prompt = gr.Radio(list(STYLES[0].examples), label="Prompts de ejemplo",
-                                             value=STYLES[0].examples[0])
+                        ex_style = gr.Dropdown([(t(st.name), st.name) for st in STYLES], value=STYLES[0].name,
+                                               label=t("Estilo"))
+                        ex_prompt = gr.Radio([t(e) for e in STYLES[0].examples], label=t("Prompts de ejemplo"),
+                                             value=t(STYLES[0].examples[0]))
                     ex_info = gr.Markdown()
-                    use_btn = gr.Button("➡️ Usar en «Crear imagen»", variant="primary")
+                    use_btn = gr.Button(t("➡️ Usar en «Crear imagen»"), variant="primary")
 
                     def style_info(name):
                         st = get_style(name)
-                        info = (f"**Palabras clave añadidas:** `{st.positive}`\n\n**Negativo:** `{st.negative or '—'}`"
-                                f"\n\n**Ajustes:** {st.steps} steps · CFG {st.cfg} · aspecto {st.aspect}")
-                        return gr.update(choices=list(st.examples), value=st.examples[0]), info
+                        info = t("**Palabras clave añadidas:** `{pos}`\n\n**Negativo:** `{neg}`\n\n**Ajustes:** "
+                                 "{steps} steps · CFG {cfg} · aspecto {aspect}", pos=st.positive,
+                                 neg=st.negative or "—", steps=st.steps, cfg=st.cfg, aspect=st.aspect)
+                        ex = [t(e) for e in st.examples]
+                        return gr.update(choices=ex, value=ex[0]), info
                     ex_style.change(style_info, ex_style, [ex_prompt, ex_info])
                     demo.load(style_info, ex_style, [ex_prompt, ex_info])
 
@@ -269,35 +303,38 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                 def gallery_page(title: str, favorites: bool):
                     gr.Markdown(f"## {title}")
                     with gr.Row():
-                        q = gr.Textbox(label="Buscar (prompt, modelo o estilo)", scale=3)
-                        d_from = gr.Textbox(label="Desde (AAAA-MM-DD)", scale=1)
-                        d_to = gr.Textbox(label="Hasta (AAAA-MM-DD)", scale=1)
-                        search_btn = gr.Button("🔍 Buscar", scale=1)
-                    gal = gr.Gallery(columns=4, height=480, format="png", label="Biblioteca",
+                        q = gr.Textbox(label=t("Buscar (prompt, modelo o estilo)"), scale=3)
+                        d_from = gr.Textbox(label=t("Desde (AAAA-MM-DD)"), scale=1)
+                        d_to = gr.Textbox(label=t("Hasta (AAAA-MM-DD)"), scale=1)
+                        search_btn = gr.Button(t("🔍 Buscar"), scale=1)
+                    gal = gr.Gallery(columns=4, height=480, format="png", label=t("Biblioteca"),
                                      object_fit="cover", allow_preview=True)
                     ids = gr.State([])
                     sel_id = gr.State(None)
-                    details = gr.Markdown("Selecciona una imagen para ver sus datos.")
+                    details = gr.Markdown(t("Selecciona una imagen para ver sus datos."))
                     with gr.Row():
-                        fav_btn = gr.Button("⭐ Favorito / quitar")
-                        dl_btn = gr.DownloadButton("⬇️ Descargar", value=None)
-                        del_btn = gr.Button("🗑️ Eliminar", variant="stop")
-                        del_ok = gr.Checkbox(False, label="Confirmo que quiero eliminarla")
+                        fav_btn = gr.Button(t("⭐ Favorito / quitar"))
+                        dl_btn = gr.DownloadButton(t("⬇️ Descargar"), value=None)
+                        del_btn = gr.Button(t("🗑️ Eliminar"), variant="stop")
+                        del_ok = gr.Checkbox(False, label=t("Confirmo que quiero eliminarla"))
 
                     def refresh(text, dfrom, dto):
                         recs = ctx.library.search(text or "", favorites, dfrom or "", dto or "")
                         return [(r.file_path, r.caption()) for r in recs], [r.id for r in recs], \
-                            f"{len(recs)} imagen(es)."
+                            t("{n} imagen(es).", n=len(recs))
 
                     def select(ids_list, evt: gr.SelectData):
                         if evt.index is None or evt.index >= len(ids_list):
                             return None, "—", gr.update(value=None)
                         r = ctx.library.get(ids_list[evt.index])
-                        md = (f"**#{r.id}** · {r.created_at} · {'⭐ Favorito' if r.favorite else ''}\n\n"
-                              f"**Prompt:** {r.prompt}\n\n**Negativo:** {r.negative or '—'}\n\n"
-                              f"**Modelo:** {r.model} · **Estilo:** {r.style or '—'} · **Tipo:** {r.kind}\n\n"
-                              f"**Tamaño:** {r.width}×{r.height} · **Steps:** {r.steps} · **CFG:** {r.cfg} · "
-                              f"**Seed:** {r.seed} · **Tiempo:** {r.seconds} s\n\n`{r.file_path}`")
+                        md = t("**#{id}** · {date} · {fav}\n\n**Prompt:** {prompt}\n\n**Negativo:** {neg}\n\n"
+                               "**Modelo:** {model} · **Estilo:** {style} · **Tipo:** {kind}\n\n"
+                               "**Tamaño:** {w}×{h} · **Steps:** {steps} · **CFG:** {cfg} · **Seed:** {seed} · "
+                               "**Tiempo:** {secs} s\n\n`{path}`",
+                               id=r.id, date=r.created_at, fav=t("⭐ Favorito") if r.favorite else "",
+                               prompt=r.prompt, neg=r.negative or "—", model=t(r.model),
+                               style=t(r.style) if r.style else "—", kind=r.kind, w=r.width, h=r.height,
+                               steps=r.steps, cfg=r.cfg, seed=r.seed, secs=r.seconds, path=r.file_path)
                         return r.id, md, gr.update(value=r.file_path)
 
                     def fav(i, text, dfrom, dto):
@@ -308,13 +345,13 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                     def delete(i, ok, text, dfrom, dto):
                         if i is None:
                             g, l, _ = refresh(text, dfrom, dto)
-                            return g, l, "Selecciona una imagen.", None, False
+                            return g, l, t("Selecciona una imagen."), None, False
                         if not ok:
                             g, l, _ = refresh(text, dfrom, dto)
-                            return g, l, "⚠️ Marca la casilla de confirmación para eliminar.", i, False
+                            return g, l, t("⚠️ Marca la casilla de confirmación para eliminar."), i, False
                         ctx.library.delete(i)
                         g, l, msg = refresh(text, dfrom, dto)
-                        return g, l, f"🗑️ Eliminada. {msg}", None, False
+                        return g, l, t("🗑️ Eliminada. {msg}", msg=msg), None, False
 
                     flt = [q, d_from, d_to]
                     search_btn.click(refresh, flt, [gal, ids, details])
@@ -325,189 +362,179 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                     return refresh, flt, [gal, ids, details]
 
                 with gr.Column(visible=False) as pages["Mis creaciones"]:
-                    lib_refresh = gallery_page("🖼️ Mis creaciones", favorites=False)
+                    lib_refresh = gallery_page("🖼️ " + t("Mis creaciones"), favorites=False)
                 with gr.Column(visible=False) as pages["Favoritos"]:
-                    fav_refresh = gallery_page("⭐ Favoritos", favorites=True)
+                    fav_refresh = gallery_page("⭐ " + t("Favoritos"), favorites=True)
 
                 # ---------------------------------------------- Herramientas
                 with gr.Column(visible=False) as pages["Herramientas"]:
-                    gr.Markdown("## 🛠️ Herramientas\nLas herramientas **clásicas** funcionan siempre. Las de "
-                                "**IA** necesitan un modelo local instalado (ver «Modelos IA»).")
+                    gr.Markdown(t("## 🛠️ Herramientas\nLas herramientas **clásicas** funcionan siempre. Las de "
+                                  "**IA** necesitan un modelo local instalado (ver «Modelos IA»)."))
                     local_choices = [c for c in model_choices() if c[1] != "hf-api"]
                     with gr.Tabs():
-                        with gr.Tab("Upscaler clásico"):
-                            gr.Markdown("Ampliación **clásica** (Lanczos + enfoque). No añade detalle inventado.")
-                            up_in = gr.Image(type="pil", label="Imagen")
-                            up_f = gr.Radio([2, 3, 4], value=2, label="Factor")
-                            up_btn = gr.Button("Ampliar", variant="primary")
-                            up_out, up_msg = gr.Image(label="Resultado", format="png"), gr.Markdown()
+                        with gr.Tab(t("Upscaler clásico")):
+                            gr.Markdown(t("Ampliación **clásica** (Lanczos + enfoque). No añade detalle inventado."))
+                            up_in = gr.Image(type="pil", label=t("Imagen"))
+                            up_f = gr.Radio([2, 3, 4], value=2, label=t("Factor"))
+                            up_btn = gr.Button(t("Ampliar"), variant="primary")
+                            up_out, up_msg = gr.Image(label=t("Resultado"), format="png"), gr.Markdown()
                             up_btn.click(lambda im, f: classic_tool(T.upscale_classic, im, int(f), kind="upscale"),
                                          [up_in, up_f], [up_out, up_msg])
-                        with gr.Tab("Upscaler IA"):
-                            gr.Markdown(f"**Real-ESRGAN x4plus** — reconstruye detalle al ampliar. "
-                                        f"Licencia {RE.LICENSE}. Descarga única de ~{RE.MODEL_MB} MB desde el "
-                                        "repositorio oficial en GitHub, verificada con SHA-256. "
-                                        "En CPU puede tardar de segundos a varios minutos según el tamaño; con GPU es casi inmediato.")
-                            ai_stat = gr.Markdown(lambda: f"Estado: {ctx.upscaler.status()}")
+
+                        with gr.Tab(t("Upscaler IA")):
+                            gr.Markdown(t("**Real-ESRGAN x4plus** — reconstruye detalle al ampliar. Licencia {lic}. "
+                                          "Descarga única de ~{mb} MB desde el repositorio oficial en GitHub, "
+                                          "verificada con SHA-256. En CPU puede tardar de segundos a varios minutos "
+                                          "según el tamaño; con GPU es casi inmediato.",
+                                          lic=RE.LICENSE, mb=RE.MODEL_MB))
+                            ai_stat = gr.Markdown(lambda: t("Estado: {s}", s=ctx.upscaler.status()))
                             with gr.Row():
-                                ai_auth = gr.Checkbox(False, label=f"Autorizo descargar Real-ESRGAN (~{RE.MODEL_MB} MB)")
-                                ai_dl = gr.Button("⬇️ Descargar modelo")
-                            ai_in = gr.Image(type="pil", label="Imagen")
-                            ai_f = gr.Radio([2, 3, 4], value=4, label="Factor")
+                                ai_auth = gr.Checkbox(False, label=t("Autorizo descargar Real-ESRGAN (~{mb} MB)",
+                                                                     mb=RE.MODEL_MB))
+                                ai_dl = gr.Button(t("⬇️ Descargar modelo"))
+                            ai_in = gr.Image(type="pil", label=t("Imagen"))
+                            ai_f = gr.Radio([2, 3, 4], value=4, label=t("Factor"))
                             with gr.Row():
-                                ai_btn = gr.Button("Ampliar con IA", variant="primary")
-                                ai_cancel = gr.Button("⛔ Cancelar")
+                                ai_btn = gr.Button(t("Ampliar con IA"), variant="primary")
+                                ai_cancel = gr.Button(t("⛔ Cancelar"))
                             ai_prog = gr.HTML()
-                            ai_out = gr.Image(label="Resultado", format="png")
+                            ai_out = gr.Image(label=t("Resultado"), format="png")
 
                             def ai_upscale(im, f):
                                 if im is None:
-                                    yield progress_html(0, 1, "❌ Sube una imagen primero."), None
+                                    yield progress_html(0, 1, t("❌ Sube una imagen primero.")), None
                                     return
                                 if not ctx.upscaler.installed():
-                                    yield progress_html(0, 1, "❌ Descarga primero el modelo (arriba)."), None
+                                    yield progress_html(0, 1, t("❌ Descarga primero el modelo (arriba).")), None
                                     return
-                                state = {"step": 0, "total": 1, "res": None, "err": None}
-                                ctx.upscale_cancel = threading.Event()
-                                t0 = time.perf_counter()
-
-                                def work():
-                                    try:
-                                        state["res"] = ctx.upscaler.upscale(
-                                            load_user_image(im), int(f),
-                                            progress=lambda a, b: state.update(step=a, total=b),
-                                            cancel=ctx.upscale_cancel)
-                                    except Exception as exc:  # noqa: BLE001
-                                        state["err"] = str(exc)
-                                th = threading.Thread(target=work, daemon=True)
-                                th.start()
-                                while th.is_alive():
-                                    yield progress_html(state["step"], state["total"],
-                                                        f"⏳ Ampliando: bloque {state['step']}/{state['total']} · "
-                                                        f"{time.perf_counter() - t0:.1f} s"), None
-                                    time.sleep(0.5)
+                                img = load_user_image(im)
+                                for html, state, secs in threaded_tool(
+                                        lambda prog, cancel: ctx.upscaler.upscale(img, int(f), progress=prog,
+                                                                                  cancel=cancel),
+                                        t("Ampliando"), "upscale_cancel"):
+                                    if html is not None:
+                                        yield html, None
                                 if state["err"]:
                                     yield progress_html(0, 1, f"❌ {state['err']}"), None
                                     return
                                 out = state["res"]
-                                secs = round(time.perf_counter() - t0, 1)
                                 rec = ctx.library.save(out, prompt="[upscale IA x%s]" % f, model="Real-ESRGAN x4plus",
                                                        kind="upscale_ai", seconds=secs)
-                                yield progress_html(1, 1, f"✅ {out.width}×{out.height} en {secs} s · guardado #{rec.id}"), out
+                                yield progress_html(1, 1, t("✅ {w}×{h} en {secs} s · guardado #{id}", w=out.width,
+                                                            h=out.height, secs=secs, id=rec.id)), out
 
                             ai_dl.click(lambda ok: ctx.upscaler.download(ok), ai_auth, ai_stat) \
                                 .then(lambda: False, None, ai_auth)
                             ai_btn.click(ai_upscale, [ai_in, ai_f], [ai_prog, ai_out])
-                            ai_cancel.click(lambda: (ctx.upscale_cancel.set(), progress_html(0, 1, "⛔ Cancelando…"))[1],
-                                            None, ai_prog)
-                        with gr.Tab("Enhancer"):
-                            en_in = gr.Image(type="pil", label="Imagen")
+                            ai_cancel.click(lambda: (ctx.upscale_cancel.set(),
+                                                     progress_html(0, 1, t("⛔ Cancelando…")))[1], None, ai_prog)
+
+                        with gr.Tab(t("Mejorar imagen")):
+                            en_in = gr.Image(type="pil", label=t("Imagen"))
                             with gr.Row():
-                                en_sh = gr.Slider(0.5, 3, 1.5, step=0.1, label="Nitidez")
-                                en_co = gr.Slider(0.5, 2, 1.1, step=0.05, label="Contraste")
-                                en_cl = gr.Slider(0, 2, 1.1, step=0.05, label="Color")
-                            en_btn = gr.Button("Mejorar", variant="primary")
-                            en_out, en_msg = gr.Image(label="Resultado", format="png"), gr.Markdown()
+                                en_sh = gr.Slider(0.5, 3, 1.5, step=0.1, label=t("Nitidez"))
+                                en_co = gr.Slider(0.5, 2, 1.1, step=0.05, label=t("Contraste"))
+                                en_cl = gr.Slider(0, 2, 1.1, step=0.05, label=t("Color"))
+                            en_btn = gr.Button(t("Mejorar"), variant="primary")
+                            en_out, en_msg = gr.Image(label=t("Resultado"), format="png"), gr.Markdown()
                             en_btn.click(lambda im, a, b, c: classic_tool(T.enhance, im, a, b, c, kind="enhance"),
                                          [en_in, en_sh, en_co, en_cl], [en_out, en_msg])
-                        with gr.Tab("Restauración"):
-                            gr.Markdown("Restauración **clásica**: reduce ruido y rayas finas, corrige contraste "
-                                        "y dominantes de color.")
-                            rs_in = gr.Image(type="pil", label="Foto antigua")
-                            rs_dn = gr.Slider(0, 7, 3, step=1, label="Reducción de ruido")
-                            rs_btn = gr.Button("Restaurar", variant="primary")
-                            rs_out, rs_msg = gr.Image(label="Resultado", format="png"), gr.Markdown()
+
+                        with gr.Tab(t("Restauración")):
+                            gr.Markdown(t("Restauración **clásica**: reduce ruido y rayas finas, corrige contraste "
+                                          "y dominantes de color."))
+                            rs_in = gr.Image(type="pil", label=t("Foto antigua"))
+                            rs_dn = gr.Slider(0, 7, 3, step=1, label=t("Reducción de ruido"))
+                            rs_btn = gr.Button(t("Restaurar"), variant="primary")
+                            rs_out, rs_msg = gr.Image(label=t("Resultado"), format="png"), gr.Markdown()
                             rs_btn.click(lambda im, d: classic_tool(T.restore, im, int(d), kind="restore"),
                                          [rs_in, rs_dn], [rs_out, rs_msg])
-                        with gr.Tab("Caras IA"):
-                            gr.Markdown(f"**GFPGAN v1.4** — restaura caras borrosas, antiguas o de baja calidad. "
-                                        f"Licencias: {FR.LICENSE}. Descarga única de ~{FR.TOTAL_MB} MB desde los "
-                                        "repositorios oficiales en GitHub, verificada con SHA-256. "
-                                        "Solo mejora las caras; combínalo con «Restauración» para el resto de la foto.")
-                            fc_stat = gr.Markdown(lambda: f"Estado: {ctx.faces.status()}")
+
+                        with gr.Tab(t("Caras IA")):
+                            gr.Markdown(t("**GFPGAN v1.4** — restaura caras borrosas, antiguas o de baja calidad. "
+                                          "Licencias: {lic}. Descarga única de ~{mb} MB desde los repositorios "
+                                          "oficiales en GitHub, verificada con SHA-256. Solo mejora las caras; "
+                                          "combínalo con «Restauración» para el resto de la foto.",
+                                          lic=FR.LICENSE, mb=FR.TOTAL_MB))
+                            fc_stat = gr.Markdown(lambda: t("Estado: {s}", s=ctx.faces.status()))
                             with gr.Row():
-                                fc_auth = gr.Checkbox(False, label=f"Autorizo descargar GFPGAN (~{FR.TOTAL_MB} MB)")
-                                fc_dl = gr.Button("⬇️ Descargar modelo")
-                            fc_in = gr.Image(type="pil", label="Foto con caras")
+                                fc_auth = gr.Checkbox(False, label=t("Autorizo descargar GFPGAN (~{mb} MB)",
+                                                                     mb=FR.TOTAL_MB))
+                                fc_dl = gr.Button(t("⬇️ Descargar modelo"))
+                            fc_in = gr.Image(type="pil", label=t("Foto con caras"))
                             with gr.Row():
-                                fc_w = gr.Slider(0, 1, 0.6, step=0.05, label="Intensidad (más baja = más fiel al original)")
+                                fc_w = gr.Slider(0, 1, 0.6, step=0.05,
+                                                 label=t("Intensidad (más baja = más fiel al original)"))
                                 fc_up = gr.Radio([("×1", 1), ("×2", 2)], value=1,
-                                                 label="Ampliar foto (×2 usa Real-ESRGAN si está instalado)")
+                                                 label=t("Ampliar foto (×2 usa Real-ESRGAN si está instalado)"))
                             with gr.Row():
-                                fc_btn = gr.Button("Restaurar caras", variant="primary")
-                                fc_cancel = gr.Button("⛔ Cancelar")
+                                fc_btn = gr.Button(t("Restaurar caras"), variant="primary")
+                                fc_cancel = gr.Button(t("⛔ Cancelar"))
                             fc_prog = gr.HTML()
-                            fc_out = gr.Image(label="Resultado", format="png")
+                            fc_out = gr.Image(label=t("Resultado"), format="png")
 
                             def face_restore(im, wgt, up):
                                 if im is None:
-                                    yield progress_html(0, 1, "❌ Sube una imagen primero."), None
+                                    yield progress_html(0, 1, t("❌ Sube una imagen primero.")), None
                                     return
                                 if not ctx.faces.installed():
-                                    yield progress_html(0, 1, "❌ Descarga primero el modelo (arriba)."), None
+                                    yield progress_html(0, 1, t("❌ Descarga primero el modelo (arriba).")), None
                                     return
-                                state = {"step": 0, "total": 1, "res": None, "err": None}
-                                ctx.faces_cancel = threading.Event()
-                                t0 = time.perf_counter()
-
-                                def work():
-                                    try:
-                                        state["res"] = ctx.faces.restore(
-                                            load_user_image(im), float(wgt), int(up), upscaler=ctx.upscaler,
-                                            progress=lambda a, b: state.update(step=a, total=b),
-                                            cancel=ctx.faces_cancel)
-                                    except Exception as exc:  # noqa: BLE001
-                                        state["err"] = str(exc)
-                                th = threading.Thread(target=work, daemon=True)
-                                th.start()
-                                while th.is_alive():
-                                    yield progress_html(state["step"], state["total"],
-                                                        f"⏳ Restaurando caras: {state['step']}/{state['total']} · "
-                                                        f"{time.perf_counter() - t0:.1f} s"), None
-                                    time.sleep(0.5)
+                                img = load_user_image(im)
+                                for html, state, secs in threaded_tool(
+                                        lambda prog, cancel: ctx.faces.restore(img, float(wgt), int(up),
+                                                                               upscaler=ctx.upscaler, progress=prog,
+                                                                               cancel=cancel),
+                                        t("Restaurando caras"), "faces_cancel"):
+                                    if html is not None:
+                                        yield html, None
                                 if state["err"]:
                                     yield progress_html(0, 1, f"❌ {state['err']}"), None
                                     return
                                 out, n = state["res"]
-                                secs = round(time.perf_counter() - t0, 1)
                                 if n == 0:
-                                    yield progress_html(0, 1, f"⚠️ No se detectó ninguna cara ({secs} s)."), None
+                                    yield progress_html(0, 1, t("⚠️ No se detectó ninguna cara ({secs} s).",
+                                                                secs=secs)), None
                                     return
-                                rec = ctx.library.save(out, prompt=f"[caras IA, intensidad {wgt}]",
+                                rec = ctx.library.save(out, prompt=f"[faces AI, {wgt}]",
                                                        model="GFPGAN v1.4", kind="faces_ai", seconds=secs)
-                                yield progress_html(1, 1, f"✅ {n} cara(s) restaurada(s) en {secs} s · "
-                                                          f"{out.width}×{out.height} · guardado #{rec.id}"), out
+                                yield progress_html(1, 1, t("✅ {n} cara(s) restaurada(s) en {secs} s · {w}×{h} · "
+                                                            "guardado #{id}", n=n, secs=secs, w=out.width,
+                                                            h=out.height, id=rec.id)), out
 
                             fc_dl.click(lambda ok: ctx.faces.download(ok), fc_auth, fc_stat) \
                                 .then(lambda: False, None, fc_auth)
                             fc_btn.click(face_restore, [fc_in, fc_w, fc_up], [fc_prog, fc_out])
-                            fc_cancel.click(lambda: (ctx.faces_cancel.set(), progress_html(0, 1, "⛔ Cancelando…"))[1],
-                                            None, fc_prog)
-                        with gr.Tab("Quitar fondo"):
-                            gr.Markdown("**Quitafondos con IA integrado** (se ejecuta con OpenCV, sin instalar nada "
-                                        "más). Elige el modelo: *Rápido* (U²-Netp, ~4,6 MB) o *Calidad* "
-                                        "(IS-Net, ~179 MB), ambos con licencia Apache 2.0. Se descargan una vez desde "
-                                        "GitHub con tu autorización y se verifican con SHA-256.")
-                            bg_stat = gr.Markdown(lambda: f"Estado: {ctx.bgremover.status()}")
+                            fc_cancel.click(lambda: (ctx.faces_cancel.set(),
+                                                     progress_html(0, 1, t("⛔ Cancelando…")))[1], None, fc_prog)
+
+                        with gr.Tab(t("Quitar fondo")):
+                            gr.Markdown(t("**Quitafondos con IA integrado** (se ejecuta con OpenCV, sin instalar nada "
+                                          "más). Elige el modelo: *Rápido* (U²-Netp, ~4,6 MB) o *Calidad* "
+                                          "(IS-Net, ~179 MB), ambos con licencia Apache 2.0. Se descargan una vez "
+                                          "desde GitHub con tu autorización y se verifican con SHA-256."))
+                            bg_stat = gr.Markdown(lambda: t("Estado: {s}", s=ctx.bgremover.status()))
                             with gr.Row():
-                                bg_model = gr.Radio([(m.label, m.id) for m in BG.MODELS.values()], value="calidad",
-                                                    label="Modelo")
-                                bg_auth = gr.Checkbox(False, label="Autorizo descargar el modelo elegido")
-                                bg_dl = gr.Button("⬇️ Descargar modelo")
-                            bg_in = gr.Image(type="pil", label="Imagen")
+                                bg_model = gr.Radio([(t(m.label), m.id) for m in BG.MODELS.values()],
+                                                    value="calidad", label=t("Modelo"))
+                                bg_auth = gr.Checkbox(False, label=t("Autorizo descargar el modelo elegido"))
+                                bg_dl = gr.Button(t("⬇️ Descargar modelo"))
+                            bg_in = gr.Image(type="pil", label=t("Imagen"))
                             with gr.Row():
-                                bg_mode = gr.Radio([("Transparente (PNG)", "transparente"), ("Color sólido", "color"),
-                                                    ("Solo máscara", "mascara")], value="transparente", label="Fondo")
-                                bg_color = gr.ColorPicker("#ffffff", label="Color de fondo")
+                                bg_mode = gr.Radio([(t("Transparente (PNG)"), "transparente"),
+                                                    (t("Color sólido"), "color"), (t("Solo máscara"), "mascara")],
+                                                   value="transparente", label=t("Fondo"))
+                                bg_color = gr.ColorPicker("#ffffff", label=t("Color de fondo"))
                             with gr.Row():
-                                bg_feather = gr.Slider(0, 10, 0, step=1, label="Suavizar borde (px)")
-                                bg_thr = gr.Slider(0, 254, 0, step=1, label="Recorte duro (0 = bordes suaves)")
-                            bg_btn = gr.Button("Quitar fondo", variant="primary")
-                            bg_out, bg_msg = gr.Image(label="Resultado", format="png"), gr.Markdown()
+                                bg_feather = gr.Slider(0, 10, 0, step=1, label=t("Suavizar borde (px)"))
+                                bg_thr = gr.Slider(0, 254, 0, step=1, label=t("Recorte duro (0 = bordes suaves)"))
+                            bg_btn = gr.Button(t("Quitar fondo"), variant="primary")
+                            bg_out, bg_msg = gr.Image(label=t("Resultado"), format="png"), gr.Markdown()
 
                             def bg_remove(im, model_id, mode, color, feather, thr):
                                 if not ctx.bgremover.installed(model_id):
-                                    return None, f"❌ {BG.MODELS[model_id].label} no está instalado: descárgalo arriba."
+                                    return None, t("❌ {name} no está instalado: descárgalo arriba.",
+                                                   name=t(BG.MODELS[model_id].label))
                                 return classic_tool(lambda img: ctx.bgremover.remove(img, model_id, mode, color,
                                                                                      int(feather), int(thr)),
                                                     im, kind="nobg")
@@ -516,102 +543,109 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                                 .then(lambda: False, None, bg_auth)
                             bg_btn.click(bg_remove, [bg_in, bg_model, bg_mode, bg_color, bg_feather, bg_thr],
                                          [bg_out, bg_msg])
-                        with gr.Tab("Mejorar prompt"):
-                            pe_in = gr.Textbox(label="Tu descripción", lines=3)
-                            pe_tr = gr.Checkbox(True, label="Traducir términos frecuentes al inglés")
-                            pe_btn = gr.Button("Mejorar", variant="primary")
-                            pe_out = gr.Textbox(label="Prompt mejorado", lines=3)
+
+                        with gr.Tab(t("Mejorar prompt")):
+                            pe_in = gr.Textbox(label=t("Tu descripción"), lines=3)
+                            pe_tr = gr.Checkbox(translate_default, label=t("Traducir términos frecuentes al inglés"))
+                            pe_btn = gr.Button(t("Mejorar"), variant="primary")
+                            pe_out = gr.Textbox(label=t("Prompt mejorado"), lines=3)
                             pe_btn.click(enhance_prompt, [pe_in, pe_tr], pe_out)
 
                         def ai_common():
                             with gr.Row():
                                 mdl = gr.Dropdown(local_choices, value=local_choices[0][1] if local_choices else None,
-                                                  label="Modelo local")
+                                                  label=t("Modelo local"))
                                 stp = gr.Slider(1, 60, 25, step=1, label="Steps")
                                 cf = gr.Slider(0, 15, 7, step=0.5, label="CFG")
                                 sd = gr.Number(-1, precision=0, label="Seed")
                             return mdl, stp, cf, sd
 
                         with gr.Tab("Image to Image"):
-                            i2_in = gr.Image(type="pil", label="Imagen de referencia")
-                            i2_p = gr.Textbox(label="Prompt"); i2_n = gr.Textbox(label="Negativo")
-                            i2_s = gr.Slider(0.1, 1.0, 0.6, step=0.05, label="Fuerza (más = más cambios)")
+                            i2_in = gr.Image(type="pil", label=t("Imagen de referencia"))
+                            i2_p = gr.Textbox(label="Prompt")
+                            i2_n = gr.Textbox(label=t("Negativo"))
+                            i2_s = gr.Slider(0.1, 1.0, 0.6, step=0.05, label=t("Fuerza (más = más cambios)"))
                             i2_m, i2_st, i2_c, i2_sd = ai_common()
-                            i2_btn = gr.Button("Generar", variant="primary")
+                            i2_btn = gr.Button(t("Generar"), variant="primary")
                             i2_stat, i2_out = gr.HTML(), gr.Gallery(columns=3, format="png")
                             i2_btn.click(lambda *a: (yield from ai_tool("img2img", *a)),
                                          [i2_in, i2_p, i2_n, i2_m, i2_s, i2_st, i2_c, i2_sd], [i2_stat, i2_out])
-                        with gr.Tab("Variaciones"):
-                            va_in = gr.Image(type="pil", label="Imagen")
-                            va_p = gr.Textbox(label="Descripción de la imagen (ayuda a mantenerla)")
-                            va_s = gr.Slider(0.2, 0.9, 0.5, step=0.05, label="Intensidad de variación")
+
+                        with gr.Tab(t("Variaciones")):
+                            va_in = gr.Image(type="pil", label=t("Imagen"))
+                            va_p = gr.Textbox(label=t("Descripción de la imagen (ayuda a mantenerla)"))
+                            va_s = gr.Slider(0.2, 0.9, 0.5, step=0.05, label=t("Intensidad de variación"))
                             va_m, va_st, va_c, va_sd = ai_common()
-                            va_btn = gr.Button("Crear 3 variaciones", variant="primary")
+                            va_btn = gr.Button(t("Crear 3 variaciones"), variant="primary")
                             va_stat, va_out = gr.HTML(), gr.Gallery(columns=3, format="png")
                             va_btn.click(lambda im, p, *a: (yield from ai_tool("variations", im, p, "", *a)),
                                          [va_in, va_p, va_m, va_s, va_st, va_c, va_sd], [va_stat, va_out])
+
                         with gr.Tab("Inpainting"):
-                            gr.Markdown("Sube la imagen y **pinta con el pincel** la zona que quieres cambiar.")
-                            ip_in = gr.ImageEditor(type="pil", label="Imagen + máscara",
+                            gr.Markdown(t("Sube la imagen y **pinta con el pincel** la zona que quieres cambiar."))
+                            ip_in = gr.ImageEditor(type="pil", label=t("Imagen + máscara"),
                                                    brush=gr.Brush(colors=["#ffffff"], color_mode="fixed"))
-                            ip_p = gr.Textbox(label="¿Qué debe aparecer en la zona pintada?")
-                            ip_n = gr.Textbox(label="Negativo")
-                            ip_s = gr.Slider(0.3, 1.0, 0.85, step=0.05, label="Fuerza")
+                            ip_p = gr.Textbox(label=t("¿Qué debe aparecer en la zona pintada?"))
+                            ip_n = gr.Textbox(label=t("Negativo"))
+                            ip_s = gr.Slider(0.3, 1.0, 0.85, step=0.05, label=t("Fuerza"))
                             ip_m, ip_st, ip_c, ip_sd = ai_common()
-                            ip_btn = gr.Button("Aplicar", variant="primary")
+                            ip_btn = gr.Button(t("Aplicar"), variant="primary")
                             ip_stat, ip_out = gr.HTML(), gr.Gallery(columns=2, format="png")
                             ip_btn.click(lambda *a: (yield from ai_tool("inpaint", *a)),
                                          [ip_in, ip_p, ip_n, ip_m, ip_s, ip_st, ip_c, ip_sd], [ip_stat, ip_out])
+
                         with gr.Tab("Outpainting"):
-                            op_in = gr.Image(type="pil", label="Imagen")
+                            op_in = gr.Image(type="pil", label=t("Imagen"))
                             with gr.Row():
-                                op_l = gr.Slider(0, 512, 128, step=8, label="Izquierda")
-                                op_r = gr.Slider(0, 512, 128, step=8, label="Derecha")
-                                op_t = gr.Slider(0, 512, 0, step=8, label="Arriba")
-                                op_b = gr.Slider(0, 512, 0, step=8, label="Abajo")
-                            op_p = gr.Textbox(label="Descripción de la escena completa")
+                                op_l = gr.Slider(0, 512, 128, step=8, label=t("Izquierda"))
+                                op_r = gr.Slider(0, 512, 128, step=8, label=t("Derecha"))
+                                op_t = gr.Slider(0, 512, 0, step=8, label=t("Arriba"))
+                                op_b = gr.Slider(0, 512, 0, step=8, label=t("Abajo"))
+                            op_p = gr.Textbox(label=t("Descripción de la escena completa"))
                             op_m, op_st, op_c, op_sd = ai_common()
-                            op_btn = gr.Button("Ampliar", variant="primary")
+                            op_btn = gr.Button(t("Ampliar"), variant="primary")
                             op_stat, op_out = gr.HTML(), gr.Gallery(columns=2, format="png")
 
-                            def _op(im, p, m, st, c, sd, l, r, t, b):
+                            def _op(im, p, m, st, c, sd, l, r, tp, b):
                                 yield from ai_tool("outpaint", im, p, "", m, 1.0, st, c, sd,
-                                                   extra=(int(l), int(r), int(t), int(b)))
+                                                   extra=(int(l), int(r), int(tp), int(b)))
                             op_btn.click(_op, [op_in, op_p, op_m, op_st, op_c, op_sd, op_l, op_r, op_t, op_b],
                                          [op_stat, op_out])
 
                 # ---------------------------------------------- Modelos
                 with gr.Column(visible=False) as pages["Modelos IA"]:
-                    gr.Markdown("## 🧠 Modelos IA\nNada se descarga sin tu autorización explícita. "
-                                "Los modelos se guardan en la carpeta de modelos configurada.")
-                    mtable = gr.Dataframe(headers=["Modelo", "Estado", "Conexión", "Compatibilidad",
-                                                   "Descarga", "VRAM mín.", "RAM mín.", "Licencia"],
+                    gr.Markdown(t("## 🧠 Modelos IA\nNada se descarga sin tu autorización explícita. "
+                                  "Los modelos se guardan en la carpeta de modelos configurada."))
+                    mtable = gr.Dataframe(headers=[t("Modelo"), t("Estado"), t("Conexión"), t("Compatibilidad"),
+                                                   t("Descarga"), t("VRAM mín."), t("RAM mín."), t("Licencia")],
                                           interactive=False, wrap=True)
                     with gr.Row():
-                        msel = gr.Dropdown([(sp.name, sp.id) for sp in ctx.models.all_specs()],
-                                           value=s.default_model, label="Modelo")
-                        mrefresh = gr.Button("🔄 Actualizar")
+                        msel = gr.Dropdown([(t(sp.name), sp.id) for sp in ctx.models.all_specs()],
+                                           value=s.default_model, label=t("Modelo"))
+                        mrefresh = gr.Button(t("🔄 Actualizar"))
                     minfo = gr.Markdown()
-                    mauth = gr.Checkbox(False, label="Autorizo descargar este modelo (he revisado tamaño y licencia)")
+                    mauth = gr.Checkbox(False, label=t("Autorizo descargar este modelo (he revisado tamaño y licencia)"))
                     with gr.Row():
-                        mdl_btn = gr.Button("⬇️ Descargar / instalar", variant="primary")
-                        mdef_btn = gr.Button("✅ Usar por defecto")
-                        mdel_btn = gr.Button("🗑️ Eliminar del disco", variant="stop")
+                        mdl_btn = gr.Button(t("⬇️ Descargar / instalar"), variant="primary")
+                        mdef_btn = gr.Button(t("✅ Usar por defecto"))
+                        mdel_btn = gr.Button(t("🗑️ Eliminar del disco"), variant="stop")
                     mmsg = gr.Markdown()
-                    with gr.Accordion("Añadir modelo local (.safetensors)", open=False):
-                        cpath = gr.Textbox(label="Ruta del archivo", placeholder=r"C:\Modelos\mi_modelo.safetensors")
-                        cname = gr.Textbox(label="Nombre")
-                        cbase = gr.Radio([("SD 1.5", "sd15"), ("SDXL", "sdxl")], value="sd15", label="Arquitectura")
-                        cadd = gr.Button("Añadir")
+                    with gr.Accordion(t("Añadir modelo local (.safetensors)"), open=False):
+                        cpath = gr.Textbox(label=t("Ruta del archivo"),
+                                           placeholder=r"C:\Modelos\mi_modelo.safetensors")
+                        cname = gr.Textbox(label=t("Nombre"))
+                        cbase = gr.Radio([("SD 1.5", "sd15"), ("SDXL", "sdxl")], value="sd15",
+                                         label=t("Arquitectura"))
+                        cadd = gr.Button(t("Añadir"))
 
                     def table():
                         rows = []
                         for st in ctx.models.statuses():
                             sp = st.spec
-                            rows.append([sp.name, st.state, sp.connection,
-                                         st.compatibility, f"{sp.download_gb} GB" if sp.download_gb else "—",
+                            rows.append([t(sp.name), st.state, sp.connection, t(st.compatibility),
+                                         f"{sp.download_gb} GB" if sp.download_gb else "—",
                                          f"{sp.min_vram_gb} GB" if sp.min_vram_gb else "—",
-                                         f"{sp.min_ram_gb} GB", sp.license])
+                                         f"{sp.min_ram_gb} GB", t(sp.license)])
                         return rows
 
                     def info(mid):
@@ -620,35 +654,38 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                         except KeyError:
                             return ""
                         st = ctx.models.status(sp)
-                        lic = f"[{sp.license}]({sp.license_url})" if sp.license_url else sp.license
-                        return (f"### {sp.name}\n**Estado:** {st.state} · **Compatibilidad con tu equipo:** "
-                                f"{st.compatibility}\n\n**Repositorio:** `{sp.repo_id}` · **Licencia:** {lic}\n\n"
-                                f"**Espacio necesario:** {sp.download_gb or '—'} GB · **VRAM mínima:** "
-                                f"{sp.min_vram_gb or '—'} GB · **RAM mínima:** {sp.min_ram_gb} GB\n\n{sp.notes}")
+                        lic = f"[{t(sp.license)}]({sp.license_url})" if sp.license_url else t(sp.license)
+                        return t("### {name}\n**Estado:** {state} · **Compatibilidad con tu equipo:** {compat}\n\n"
+                                 "**Repositorio:** `{repo}` · **Licencia:** {lic}\n\n**Espacio necesario:** {gb} GB · "
+                                 "**VRAM mínima:** {vram} GB · **RAM mínima:** {ram} GB\n\n{notes}",
+                                 name=t(sp.name), state=st.state, compat=t(st.compatibility), repo=sp.repo_id,
+                                 lic=lic, gb=sp.download_gb or "—", vram=sp.min_vram_gb or "—",
+                                 ram=sp.min_ram_gb, notes=t(sp.notes))
 
                     def all_model_updates():
                         ch = model_choices()
                         return [gr.update(choices=ch), gr.update(choices=ch)]
 
                     def do_download(mid, ok, progress=gr.Progress()):
-                        progress(0, desc="Descargando… (puede tardar mucho, no cierres la ventana)")
+                        progress(0, desc=t("Descargando… (puede tardar mucho, no cierres la ventana)"))
                         msg = ctx.models.download(mid, ok)
                         return [msg, table(), info(mid), False] + all_model_updates()
 
                     def do_default(mid):
                         ctx.store.update(default_model=mid)
-                        return [f"Modelo por defecto: **{ctx.models.spec(mid).name}**", table(), info(mid), False] \
-                            + [gr.update(choices=model_choices(), value=mid)] * 2
+                        return [t("Modelo por defecto: **{name}**", name=t(ctx.models.spec(mid).name)), table(),
+                                info(mid), False] + [gr.update(choices=model_choices(), value=mid)] * 2
 
                     def do_delete(mid, ok):
                         if not ok:
-                            return ["⚠️ Marca la casilla para confirmar.", table(), info(mid), False] + \
+                            return [t("⚠️ Marca la casilla para confirmar."), table(), info(mid), False] + \
                                 all_model_updates()
                         return [ctx.models.delete(mid), table(), info(mid), False] + all_model_updates()
 
                     def do_add(path, name, base):
                         msg = ctx.models.add_custom(path, name, base)
-                        return [msg, table(), gr.update(choices=[(sp.name, sp.id) for sp in ctx.models.all_specs()])] \
+                        return [msg, table(),
+                                gr.update(choices=[(t(sp.name), sp.id) for sp in ctx.models.all_specs()])] \
                             + all_model_updates()
 
                     gen_models = [home["model"], create["model"]]
@@ -662,76 +699,86 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
 
                 # ---------------------------------------------- Configuración
                 with gr.Column(visible=False) as pages["Configuración"]:
-                    gr.Markdown("## ⚙️ Configuración")
-                    with gr.Tab("General"):
-                        c_lang = gr.Dropdown([("Español", "es")], value="es", label="Idioma",
-                                             info="Por ahora solo está disponible el español.")
-                        c_theme = gr.Dropdown([("Oscuro (MARS)", "oscuro")], value="oscuro", label="Tema")
-                        c_out = gr.Textbox(str(s.output_path), label="Carpeta de imágenes")
-                        c_mod = gr.Textbox(str(s.models_path), label="Carpeta de modelos")
-                    with gr.Tab("Generación"):
-                        c_style = gr.Dropdown(style_names(), value=s.default_style, label="Estilo por defecto")
-                        c_steps = gr.Slider(1, 80, s.default_steps, step=1, label="Steps por defecto")
-                        c_cfg = gr.Slider(0, 20, s.default_cfg, step=0.5, label="CFG por defecto")
-                        c_res = gr.Dropdown(RESOLUTIONS, value=s.default_resolution, label="Resolución por defecto")
-                        c_asp = gr.Dropdown(list(ASPECTS), value=s.default_aspect, label="Aspecto por defecto")
-                    with gr.Tab("Memoria"):
-                        c_low = gr.Checkbox(s.low_power_mode, label="Modo bajo consumo (descarga partes del "
-                                            "modelo a la CPU; menos VRAM, algo más lento)")
-                        c_unl = gr.Checkbox(s.unload_after_generation, label="Liberar el modelo de memoria tras "
-                                            "cada generación (mínima RAM, más lento)")
-                        c_batch = gr.Slider(1, 8, s.max_batch, step=1, label="Máximo de imágenes por lote")
-                    with gr.Tab("APIs y conexiones"):
-                        gr.Markdown(
+                    gr.Markdown(t("## ⚙️ Configuración"))
+                    with gr.Tab(t("General")):
+                        c_lang = gr.Dropdown([(v, k) for k, v in LANGUAGES.items()], value=get_language(),
+                                             label=t("Idioma"),
+                                             info=t("El cambio se aplica al reiniciar MARS.AI."))
+                        gr.Dropdown([(t("Oscuro (MARS)"), "oscuro")], value="oscuro", label=t("Tema"))
+                        c_out = gr.Textbox(str(s.output_path), label=t("Carpeta de imágenes"))
+                        c_mod = gr.Textbox(str(s.models_path), label=t("Carpeta de modelos"))
+                    with gr.Tab(t("Generación")):
+                        c_style = gr.Dropdown(style_choices(), value=s.default_style, label=t("Estilo por defecto"))
+                        c_steps = gr.Slider(1, 80, s.default_steps, step=1, label=t("Steps por defecto"))
+                        c_cfg = gr.Slider(0, 20, s.default_cfg, step=0.5, label=t("CFG por defecto"))
+                        c_res = gr.Dropdown(RESOLUTIONS, value=s.default_resolution,
+                                            label=t("Resolución por defecto"))
+                        c_asp = gr.Dropdown(list(ASPECTS), value=s.default_aspect, label=t("Aspecto por defecto"))
+                    with gr.Tab(t("Memoria")):
+                        c_low = gr.Checkbox(s.low_power_mode, label=t("Modo bajo consumo (descarga partes del "
+                                                                      "modelo a la CPU; menos VRAM, algo más lento)"))
+                        c_unl = gr.Checkbox(s.unload_after_generation, label=t("Liberar el modelo de memoria tras "
+                                                                               "cada generación (mínima RAM, más lento)"))
+                        c_batch = gr.Slider(1, 8, s.max_batch, step=1, label=t("Máximo de imágenes por lote"))
+                    with gr.Tab(t("APIs y conexiones")):
+                        gr.Markdown(t(
                             "**API de Hugging Face (opcional).** Crea un token gratuito en "
                             "huggingface.co → Settings → Access Tokens. Las cuentas gratuitas incluyen un "
                             "crédito mensual limitado; **las condiciones pueden cambiar y el uso extra puede "
                             "tener coste**. Revisa https://huggingface.co/docs/inference-providers/pricing. "
                             "MARS.AI nunca contrata nada por ti.\n\n"
                             "El token se guarda en el **Administrador de credenciales de Windows** (keyring) y "
-                            "nunca se escribe en registros ni en archivos de configuración.")
-                        tok_state = gr.Markdown(lambda: f"Token actual: `{ctx.secrets.mask(ctx.secrets.get('huggingface'))}`"
-                                                f" · Almacén seguro: {'✅' if ctx.secrets.secure_backend_available else '❌'}")
-                        c_tok = gr.Textbox(type="password", label="Nuevo token de Hugging Face (vacío = no cambiar)")
-                        c_tok_del = gr.Checkbox(False, label="Borrar el token guardado")
-                        c_hfm = gr.Textbox(s.hf_api_model, label="Modelo para la API",
-                                           info="Ej.: black-forest-labs/FLUX.1-schnell, "
-                                                "stabilityai/stable-diffusion-xl-base-1.0")
+                            "nunca se escribe en registros ni en archivos de configuración."))
+
+                        def token_line():
+                            return t("Token actual: `{tok}` · Almacén seguro: {ok}",
+                                     tok=ctx.secrets.mask(ctx.secrets.get("huggingface")),
+                                     ok="✅" if ctx.secrets.secure_backend_available else "❌")
+                        tok_state = gr.Markdown(token_line)
+                        c_tok = gr.Textbox(type="password", label=t("Nuevo token de Hugging Face (vacío = no cambiar)"))
+                        c_tok_del = gr.Checkbox(False, label=t("Borrar el token guardado"))
+                        c_hfm = gr.Textbox(s.hf_api_model, label=t("Modelo para la API"),
+                                           info=t("Ej.: black-forest-labs/FLUX.1-schnell, "
+                                                  "stabilityai/stable-diffusion-xl-base-1.0"))
                         c_cost = gr.Checkbox(s.accepted_api_cost_warning,
-                                             label="Entiendo que la API externa puede tener límites o costes")
-                    with gr.Tab("Sistema"):
-                        sysmd = gr.Code(format_report(ctx.system), language=None, label="Diagnóstico del equipo")
-                    c_save = gr.Button("💾 Guardar configuración", variant="primary")
+                                             label=t("Entiendo que la API externa puede tener límites o costes"))
+                    with gr.Tab(t("Sistema")):
+                        gr.Code(format_report(ctx.system), language=None, label=t("Diagnóstico del equipo"))
+                    c_save = gr.Button(t("💾 Guardar configuración"), variant="primary")
                     c_msg = gr.Markdown()
 
-                    def save_cfg(out, mod, style, steps, cfg, res, asp, low, unl, batch, tok, tok_del, hfm, cost):
-                        for label, pth in (("imágenes", out), ("modelos", mod)):
+                    def save_cfg(lang, out, mod, style, steps, cfg, res, asp, low, unl, batch, tok, tok_del, hfm,
+                                 cost):
+                        for label, pth in ((t("imágenes"), out), (t("modelos"), mod)):
                             try:
                                 Path(pth).mkdir(parents=True, exist_ok=True)
                             except OSError as exc:
-                                return f"❌ Carpeta de {label} no válida: {exc}", gr.update()
-                        ctx.store.update(output_dir=out, models_dir=mod, default_style=style,
+                                return t("❌ Carpeta de {label} no válida: {err}", label=label, err=exc), gr.update()
+                        lang_changed = lang != ctx.settings.language
+                        ctx.store.update(language=lang, output_dir=out, models_dir=mod, default_style=style,
                                          default_steps=int(steps), default_cfg=float(cfg), default_resolution=int(res),
                                          default_aspect=asp, low_power_mode=bool(low),
                                          unload_after_generation=bool(unl), max_batch=int(batch),
                                          hf_api_model=hfm.strip() or "black-forest-labs/FLUX.1-schnell",
                                          accepted_api_cost_warning=bool(cost))
                         ctx.library.set_output_dir(Path(out))
-                        msg = "✅ Configuración guardada."
+                        msg = t("✅ Configuración guardada.")
+                        if lang_changed:
+                            msg += " " + t("🌐 Reinicia MARS.AI para aplicar el idioma.")
                         if tok_del:
                             ctx.secrets.delete("huggingface")
-                            msg += " Token borrado."
+                            msg += " " + t("Token borrado.")
                         elif tok:
                             if not cost:
-                                msg += " ⚠️ Token NO guardado: acepta primero el aviso de costes."
+                                msg += " " + t("⚠️ Token NO guardado: acepta primero el aviso de costes.")
                             elif ctx.secrets.set("huggingface", tok.strip()):
-                                msg += " Token guardado de forma segura."
+                                msg += " " + t("Token guardado de forma segura.")
                             else:
-                                msg += " ❌ No se pudo guardar el token (almacén seguro no disponible)."
+                                msg += " " + t("❌ No se pudo guardar el token (almacén seguro no disponible).")
                         ctx.models.unload()  # aplica cambios de memoria / API
-                        return msg, f"Token actual: `{ctx.secrets.mask(ctx.secrets.get('huggingface'))}`"
-                    c_save.click(save_cfg, [c_out, c_mod, c_style, c_steps, c_cfg, c_res, c_asp, c_low, c_unl,
-                                            c_batch, c_tok, c_tok_del, c_hfm, c_cost], [c_msg, tok_state]) \
+                        return msg, token_line()
+                    c_save.click(save_cfg, [c_lang, c_out, c_mod, c_style, c_steps, c_cfg, c_res, c_asp, c_low,
+                                            c_unl, c_batch, c_tok, c_tok_del, c_hfm, c_cost], [c_msg, tok_state]) \
                         .then(lambda: "", None, c_tok)
 
         # ================================================== navegación

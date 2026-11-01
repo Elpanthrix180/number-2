@@ -13,9 +13,10 @@ import os
 import threading
 from dataclasses import dataclass, field, asdict, fields
 from pathlib import Path
+from core.i18n import N_, t
 
 APP_NAME = "MARS.AI"
-SLOGAN = "Transforma tu imaginación en imágenes."
+SLOGAN = N_("Transforma tu imaginación en imágenes.")
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 KEYRING_SERVICE = "MARS.AI"
 
@@ -158,5 +159,5 @@ class SecretStore:
     @staticmethod
     def mask(value: str | None) -> str:
         if not value:
-            return "(no configurada)"
+            return t("(no configurada)")
         return f"••••••••{value[-4:]}" if len(value) > 8 else "••••"
