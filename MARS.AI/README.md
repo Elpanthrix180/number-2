@@ -33,6 +33,7 @@ Si solo quieres el diagnóstico del equipo, sin instalar nada: `python check_sys
 | Progreso en vivo, cancelar, tiempo de generación | ✅ | — |
 | Galería: guardar, descargar, borrar, favoritos, buscar, filtrar por fecha, ver prompt y modelo | ✅ | — |
 | Upscaler con IA (Real-ESRGAN x4plus, BSD-3) | ✅ | Descarga única de ~64 MB con tu autorización, verificada con SHA-256 |
+| Restauración de caras con IA (GFPGAN v1.4, Apache 2.0, y detector YuNet, MIT) | ✅ | Descarga única de ~333 MB con tu autorización, verificada con SHA-256 |
 | Upscaler, mejora de imagen y restauración (clásicos) | ✅ | Ninguno (Pillow) |
 | Mejorar prompt | ✅ | Ninguno (diccionario local ES→EN y calificadores) |
 | Image to Image, Variaciones, Inpainting, Outpainting | ✅ | Un modelo **local** instalado |
@@ -41,8 +42,10 @@ Si solo quieres el diagnóstico del equipo, sin instalar nada: `python check_sys
 | Modo de bajo consumo y liberar memoria | ✅ | — |
 
 Ten en cuenta estas limitaciones:
-- La restauración de fotos es **clásica**: no reconstruye caras como haría un modelo de IA (por ejemplo, GFPGAN).
-  Para ampliar con IA usa *Herramientas → Upscaler IA*.
+- La restauración general de fotos es **clásica**. Para las caras usa *Herramientas → Caras IA* (GFPGAN)
+  y para ampliar, *Herramientas → Upscaler IA* (Real-ESRGAN).
+- GFPGAN reconstruye las caras: con una intensidad alta puede cambiar ligeramente los rasgos.
+  Una intensidad de 0,5–0,7 conserva mejor la identidad.
 - El idioma de la interfaz es solo el español y el tema es solo el oscuro.
 
 ## Modelos
@@ -89,6 +92,9 @@ MARS.AI/
   generator/              estilos, motor (hilos, progreso, cancelación), potenciador de prompts
   models/                 catálogo, backends (Diffusers y API de HF), administrador
   tools/image_tools.py    upscaler, mejora, restauración, quitar fondo, utilidades de inpaint y outpaint
+  tools/realesrgan.py     upscaler con IA (Real-ESRGAN)
+  tools/face_restore.py   restauración de caras (GFPGAN + YuNet)
+  tools/gfpgan_arch/      arquitectura de GFPGAN (Apache 2.0, con su licencia)
   gallery/library.py      biblioteca de imágenes
   database/db.py          SQLite
   interface/              interfaz Gradio y tema CSS

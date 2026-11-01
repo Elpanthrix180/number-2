@@ -108,3 +108,40 @@ def test_realesrgan_real_weights():
     ev = threading.Event(); ev.set()
     with pytest.raises(InterruptedError):
         u.upscale(img, 4, cancel=ev)
+
+
+GFP = "/tmp/claude-0/gfpm"
+
+
+def test_face_restore_requires_authorization(tmp_path):
+    from PIL import Image
+    from tools.face_restore import FaceRestorer
+    fr = FaceRestorer(tmp_path)
+    assert not fr.installed()
+    assert "autorización" in fr.download(False)
+    assert not (tmp_path / "gfpgan").exists()
+    with pytest.raises(RuntimeError):
+        fr.restore(Image.new("RGB", (64, 64)))
+
+
+@pytest.mark.skipif(not os.path.isdir(GFP), reason="pesos de GFPGAN no disponibles")
+def test_face_restore_real_weights():
+    import threading
+    import numpy as np
+    from PIL import Image
+    from tools.face_restore import FaceRestorer, sha256_file, GFPGAN_FILE
+    fr = FaceRestorer(GFP)
+    assert sha256_file(fr.path(GFPGAN_FILE)) == GFPGAN_FILE.sha256
+    face = Image.open("/tmp/claude-0/face_in.png") if os.path.exists("/tmp/claude-0/face_in.png") else None
+    if face is not None:
+        out, n = fr.restore(face, 0.6)
+        assert n == 1 and out.size == face.size
+        diff = np.abs(np.asarray(out, np.float32) - np.asarray(face, np.float32))
+        assert diff[60:200, 190:310].mean() > 3   # la cara cambia
+        assert diff[440:, :80].mean() < 0.5        # el fondo lejano no
+    blank, n = fr.restore(Image.new("RGBA", (96, 96), (90, 90, 90, 200)))
+    assert n == 0 and blank.mode == "RGBA"
+    ev = threading.Event(); ev.set()
+    if face is not None:
+        with pytest.raises(InterruptedError):
+            fr.restore(face, cancel=ev)
