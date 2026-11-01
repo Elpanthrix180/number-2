@@ -3,12 +3,9 @@
 Herramientas clásicas (siempre disponibles, solo Pillow/NumPy):
   - upscale_classic, enhance, restore
 Herramientas con IA (requieren dependencias o un modelo de difusión instalado):
-  - remove_background (rembg, opcional)
   - img2img / variations / inpaint / outpaint (usan el modelo de difusión activo)
 """
 from __future__ import annotations
-
-import importlib.util
 
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
@@ -58,26 +55,6 @@ def restore(img: Image.Image, denoise: int = 3, fix_colors: bool = True,
         arr *= means.mean() / np.maximum(means, 1)   # balance de blancos «gray world»
         out = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
     return out.filter(ImageFilter.UnsharpMask(radius=1.5, percent=60, threshold=3))
-
-
-# --------------------------------------------------------------- fondos
-def rembg_available() -> bool:
-    return importlib.util.find_spec("rembg") is not None
-
-
-_rembg_session = None
-
-
-def remove_background(img: Image.Image) -> Image.Image:
-    if not rembg_available():
-        raise RuntimeError("El quitafondos con IA no está instalado. Ejecuta install_optional_tools.bat "
-                           "(instala rembg y descarga un modelo de ~170 MB con tu autorización).")
-    global _rembg_session
-    from rembg import new_session, remove
-
-    if _rembg_session is None:
-        _rembg_session = new_session("u2net")
-    return remove(img.convert("RGB"), session=_rembg_session)
 
 
 # ------------------------------------------------------- outpainting

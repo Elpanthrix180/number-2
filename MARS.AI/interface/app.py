@@ -18,6 +18,7 @@ from generator.prompt_enhancer import enhance_prompt
 from generator.styles import STYLES, get_style, style_names
 from models.backends import BackendUnavailable, GenRequest
 from tools import image_tools as T
+from tools import background_remover as BG
 from tools import face_restore as FR
 from tools import realesrgan as RE
 
@@ -142,7 +143,8 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
         try:
             t0 = time.perf_counter()
             out = fn(load_user_image(image), *args)
-            rec = ctx.library.save(out, prompt=f"[{kind}]", model="Herramienta clásica", kind=kind,
+            model = "Quitafondos IA" if kind == "nobg" else "Herramienta clásica"
+            rec = ctx.library.save(out, prompt=f"[{kind}]", model=model, kind=kind,
                                    seconds=round(time.perf_counter() - t0, 2))
             return out, f"✅ Listo en {rec.seconds} s · {out.width}×{out.height} · guardado como #{rec.id}"
         except Exception as exc:  # noqa: BLE001
@@ -482,14 +484,38 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                             fc_cancel.click(lambda: (ctx.faces_cancel.set(), progress_html(0, 1, "⛔ Cancelando…"))[1],
                                             None, fc_prog)
                         with gr.Tab("Quitar fondo"):
-                            gr.Markdown("Estado: " + ("🟢 disponible (rembg)" if T.rembg_available() else
-                                                      "🔴 no instalado — ejecuta `install_optional_tools.bat`"))
+                            gr.Markdown("**Quitafondos con IA integrado** (se ejecuta con OpenCV, sin instalar nada "
+                                        "más). Elige el modelo: *Rápido* (U²-Netp, ~4,6 MB) o *Calidad* "
+                                        "(IS-Net, ~179 MB), ambos con licencia Apache 2.0. Se descargan una vez desde "
+                                        "GitHub con tu autorización y se verifican con SHA-256.")
+                            bg_stat = gr.Markdown(lambda: f"Estado: {ctx.bgremover.status()}")
+                            with gr.Row():
+                                bg_model = gr.Radio([(m.label, m.id) for m in BG.MODELS.values()], value="calidad",
+                                                    label="Modelo")
+                                bg_auth = gr.Checkbox(False, label="Autorizo descargar el modelo elegido")
+                                bg_dl = gr.Button("⬇️ Descargar modelo")
                             bg_in = gr.Image(type="pil", label="Imagen")
+                            with gr.Row():
+                                bg_mode = gr.Radio([("Transparente (PNG)", "transparente"), ("Color sólido", "color"),
+                                                    ("Solo máscara", "mascara")], value="transparente", label="Fondo")
+                                bg_color = gr.ColorPicker("#ffffff", label="Color de fondo")
+                            with gr.Row():
+                                bg_feather = gr.Slider(0, 10, 0, step=1, label="Suavizar borde (px)")
+                                bg_thr = gr.Slider(0, 254, 0, step=1, label="Recorte duro (0 = bordes suaves)")
                             bg_btn = gr.Button("Quitar fondo", variant="primary")
-                            bg_out, bg_msg = gr.Image(label="Resultado (PNG transparente)", format="png"), \
-                                gr.Markdown()
-                            bg_btn.click(lambda im: classic_tool(T.remove_background, im, kind="nobg"),
-                                         bg_in, [bg_out, bg_msg])
+                            bg_out, bg_msg = gr.Image(label="Resultado", format="png"), gr.Markdown()
+
+                            def bg_remove(im, model_id, mode, color, feather, thr):
+                                if not ctx.bgremover.installed(model_id):
+                                    return None, f"❌ {BG.MODELS[model_id].label} no está instalado: descárgalo arriba."
+                                return classic_tool(lambda img: ctx.bgremover.remove(img, model_id, mode, color,
+                                                                                     int(feather), int(thr)),
+                                                    im, kind="nobg")
+
+                            bg_dl.click(lambda m, ok: ctx.bgremover.download(m, ok), [bg_model, bg_auth], bg_stat) \
+                                .then(lambda: False, None, bg_auth)
+                            bg_btn.click(bg_remove, [bg_in, bg_model, bg_mode, bg_color, bg_feather, bg_thr],
+                                         [bg_out, bg_msg])
                         with gr.Tab("Mejorar prompt"):
                             pe_in = gr.Textbox(label="Tu descripción", lines=3)
                             pe_tr = gr.Checkbox(True, label="Traducir términos frecuentes al inglés")

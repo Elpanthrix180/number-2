@@ -11,6 +11,7 @@ from database.db import Database
 from gallery.library import Library
 from generator.engine import GenerationJob
 from models.manager import ModelManager
+from tools.background_remover import BackgroundRemover
 from tools.face_restore import FaceRestorer
 from tools.realesrgan import RealESRGAN
 
@@ -31,12 +32,14 @@ class AppContext:
         self.upscale_cancel = threading.Event()
         self.faces = FaceRestorer(s.models_path)
         self.faces_cancel = threading.Event()
+        self.bgremover = BackgroundRemover(s.models_path)
 
     def free_memory(self) -> str:
         self.models.unload()
         self.upscaler.unload()
         self.faces.unload()
-        return "Memoria liberada (modelo de difusión, Real-ESRGAN y GFPGAN)."
+        self.bgremover.unload()
+        return "Memoria liberada (difusión, Real-ESRGAN, GFPGAN y quitafondos)."
 
     @property
     def settings(self):
