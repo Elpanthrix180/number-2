@@ -1,5 +1,21 @@
-/* MARS.AI — tema oscuro con acentos morados y azules */
-:root, .dark {
+/* MARS.AI — temas claro y oscuro con acentos morados y azules.
+   Gradio activa el modo oscuro con la clase .dark en <body>; los tokens de abajo cambian con ella. */
+:root {
+  --mars-bg: #f4f3fa;
+  --mars-panel: #ffffff;
+  --mars-panel-2: #f1eefc;
+  --mars-border: #dcd7f0;
+  --mars-purple: #7c3aed;
+  --mars-blue: #2563eb;
+  --mars-text: #1b1530;
+  --mars-muted: #5b5675;
+  --mars-track: #e4e0f5;
+  --mars-glow-1: #e3dcff;
+  --mars-glow-2: #d9e6ff;
+  --mars-title: linear-gradient(90deg, #7c3aed, #2563eb, #7c3aed);
+  --mars-danger: #b91c1c;
+}
+.dark {
   --mars-bg: #07070c;
   --mars-panel: #11111a;
   --mars-panel-2: #181826;
@@ -8,15 +24,20 @@
   --mars-blue: #3b82f6;
   --mars-text: #e7e7f3;
   --mars-muted: #9a9ab5;
+  --mars-track: #1f1f33;
+  --mars-glow-1: #1c1240;
+  --mars-glow-2: #0d1d45;
+  --mars-title: linear-gradient(90deg, #a78bfa, #60a5fa, #a78bfa);
+  --mars-danger: #fca5a5;
 }
-body, .gradio-container { background: radial-gradient(1200px 600px at 10% -10%, #1c1240 0%, transparent 60%),
-  radial-gradient(900px 500px at 110% 10%, #0d1d45 0%, transparent 55%), var(--mars-bg) !important;
-  color: var(--mars-text) !important; }
+body, .gradio-container { background: radial-gradient(1200px 600px at 10% -10%, var(--mars-glow-1) 0%, transparent 60%),
+  radial-gradient(900px 500px at 110% 10%, var(--mars-glow-2) 0%, transparent 55%), var(--mars-bg) !important;
+  color: var(--mars-text) !important; transition: background-color .3s ease, color .3s ease; }
 .gradio-container { max-width: 1400px !important; }
 #mars-header { text-align: center; padding: 18px 0 6px; }
 #mars-header h1 { font-size: 3rem; margin: 0; letter-spacing: .12em; font-weight: 800;
-  background: linear-gradient(90deg, #a78bfa, #60a5fa, #a78bfa); background-size: 200% auto;
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  background-image: var(--mars-title) !important; background-size: 200% auto;
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
   animation: mars-shine 6s linear infinite; text-shadow: 0 0 40px rgba(139,92,246,.25); }
 #mars-header p { color: var(--mars-muted); margin: 4px 0 0; font-size: 1.1rem; }
 @keyframes mars-shine { to { background-position: 200% center; } }
@@ -35,9 +56,12 @@ body, .gradio-container { background: radial-gradient(1200px 600px at 10% -10%, 
   border: none !important; color: white !important; font-weight: 700; letter-spacing: .06em;
   box-shadow: 0 0 22px rgba(99,102,241,.45); transition: transform .15s ease, box-shadow .2s ease; }
 #mars-generate:hover { transform: translateY(-1px); box-shadow: 0 0 32px rgba(139,92,246,.7); }
-#mars-cancel { border-color: #ef4444 !important; color: #fca5a5 !important; }
+#mars-cancel { border-color: #ef4444 !important; color: var(--mars-danger) !important; }
 .mars-status { font-family: ui-monospace, Consolas, monospace; font-size: .9rem; color: var(--mars-muted); }
 .mars-muted { color: var(--mars-muted); }
 .mars-style-card { border: 1px solid var(--mars-border); border-radius: 14px; padding: 10px 12px;
   background: var(--mars-panel-2); transition: border-color .2s, box-shadow .2s; }
 .mars-style-card:hover { border-color: var(--mars-blue); box-shadow: 0 0 12px rgba(59,130,246,.3); }
+.mars-track { height: 8px; border-radius: 6px; background: var(--mars-track); overflow: hidden; margin-top: 6px; }
+.mars-track > div { height: 100%; background: linear-gradient(90deg, #8b5cf6, #3b82f6); transition: width .3s; }
+.mars-sep { border: none; border-top: 1px solid var(--mars-border); margin: 6px 0; }
