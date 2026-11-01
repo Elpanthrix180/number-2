@@ -474,4 +474,31 @@ EN: dict[str, str] = {
     "Token guardado de forma segura.": "Token saved securely.",
     "❌ No se pudo guardar el token (almacén seguro no disponible).":
         "❌ The token could not be saved (secure storage unavailable).",
+
+    # ------------------------------------------------ historial de prompts
+    "📜 Historial de prompts": "📜 Prompt history",
+    "Buscar en el historial": "Search history",
+    "Solo fijados": "Pinned only",
+    "Prompt guardado": "Saved prompt",
+    "Elige un prompt para ver sus ajustes.": "Pick a prompt to see its settings.",
+    "↩️ Usar": "↩️ Use",
+    "🎲 Usar con la misma seed": "🎲 Use with the same seed",
+    "📌 Fijar / soltar": "📌 Pin / unpin",
+    "Nombre (opcional)": "Name (optional)",
+    "✏️ Guardar nombre": "✏️ Save name",
+    "Confirmo borrar el historial (los fijados se conservan)": "I confirm clearing the history (pinned prompts are kept)",
+    "🧹 Borrar historial": "🧹 Clear history",
+    "Elige un prompt primero.": "Pick a prompt first.",
+    "✅ Prompt cargado. Pulsa «GENERAR IMAGEN».": "✅ Prompt loaded. Press “GENERATE IMAGE”.",
+    "📌 Fijado: no se borrará.": "📌 Pinned: it will not be deleted.",
+    "Soltado.": "Unpinned.",
+    "🗑️ Prompt eliminado del historial.": "🗑️ Prompt removed from the history.",
+    "✅ Nombre guardado.": "✅ Name saved.",
+    "🧹 {n} prompt(s) borrado(s). Los fijados se conservan.": "🧹 {n} prompt(s) deleted. Pinned prompts are kept.",
+    "**Prompt:** {prompt}\n\n**Negativo:** {neg}\n\n**Estilo:** {style} · **Modelo:** {model} · **Resolución:** "
+    "{res} · **Aspecto:** {aspect} · **Steps:** {steps} · **CFG:** {cfg} · **Seed:** {seed} (última usada: {last})"
+    "\n\n**Usos:** {uses} · **Último uso:** {date}":
+        "**Prompt:** {prompt}\n\n**Negative:** {neg}\n\n**Style:** {style} · **Model:** {model} · **Resolution:** "
+        "{res} · **Aspect:** {aspect} · **Steps:** {steps} · **CFG:** {cfg} · **Seed:** {seed} (last used: {last})"
+        "\n\n**Uses:** {uses} · **Last used:** {date}",
 }

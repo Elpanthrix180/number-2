@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PIL import Image, PngImagePlugin
 
-from database.db import Database
+from database.db import Database, like_pattern
 from core.i18n import t
 
 log = logging.getLogger(__name__)
@@ -87,8 +87,8 @@ class Library:
         sql = "SELECT * FROM images WHERE 1=1"
         params: list = []
         if text.strip():
-            sql += " AND (prompt LIKE ? OR model LIKE ? OR style LIKE ?)"
-            like = f"%{text.strip()}%"
+            sql += " AND (prompt LIKE ? ESCAPE '\\' OR model LIKE ? ESCAPE '\\' OR style LIKE ? ESCAPE '\\')"
+            like = like_pattern(text.strip())
             params += [like, like, like]
         if favorites_only:
             sql += " AND favorite=1"

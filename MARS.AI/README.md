@@ -32,6 +32,7 @@ Si solo quieres el diagnóstico del equipo, sin instalar nada: `python check_sys
 | Prompt, negativo, resolución (512/768/1024/personalizada), aspecto, lote, seed, steps, CFG | ✅ | — |
 | Progreso en vivo, cancelar, tiempo de generación | ✅ | — |
 | Galería: guardar, descargar, borrar, favoritos, buscar, filtrar por fecha, ver prompt y modelo | ✅ | — |
+| Historial de prompts reutilizables: buscar, reutilizar con sus ajustes (o con la misma seed), fijar, nombrar y borrar | ✅ | — |
 | Upscaler con IA (Real-ESRGAN x4plus, BSD-3) | ✅ | Descarga única de ~64 MB con tu autorización, verificada con SHA-256 |
 | Restauración de caras con IA (GFPGAN v1.4, Apache 2.0, y detector YuNet, MIT) | ✅ | Descarga única de ~333 MB con tu autorización, verificada con SHA-256 |
 | Upscaler, mejora de imagen y restauración (clásicos) | ✅ | Ninguno (Pillow) |
@@ -101,6 +102,7 @@ MARS.AI/
   tools/background_remover.py  quitafondos con IA (U²-Netp / IS-Net con OpenCV)
   tools/gfpgan_arch/      arquitectura de GFPGAN (Apache 2.0, con su licencia)
   gallery/library.py      biblioteca de imágenes
+  gallery/prompt_history.py  historial de prompts reutilizables
   database/db.py          SQLite
   interface/              interfaz Gradio y tema CSS
   tests/                  pruebas automáticas (pytest)

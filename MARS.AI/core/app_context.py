@@ -9,6 +9,7 @@ from config.settings import SecretStore, SettingsStore
 from core.system_info import SystemReport, collect
 from database.db import Database
 from gallery.library import Library
+from gallery.prompt_history import PromptHistory
 from generator.engine import GenerationJob
 from models.manager import ModelManager
 from tools.background_remover import BackgroundRemover
@@ -28,6 +29,7 @@ class AppContext:
         self.system = system or collect(str(self.store.data_dir))
         self.db = Database(self.store.data_dir / "marsai.db")
         self.library = Library(self.db, s.output_path)
+        self.prompts = PromptHistory(self.db)
         self.models = ModelManager(self.store, self.secrets, self.system)
         self.current_job: GenerationJob | None = None
         self.upscaler = RealESRGAN(s.models_path)

@@ -25,6 +25,12 @@ CREATE INDEX IF NOT EXISTS idx_images_fav ON images(favorite);
 """
 
 
+def like_pattern(text: str) -> str:
+    """Patrón LIKE que busca `text` literalmente (escapa % y _). Úsalo con ESCAPE '\\'."""
+    esc = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{esc}%"
+
+
 class Database:
     def __init__(self, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
