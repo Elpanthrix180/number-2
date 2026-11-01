@@ -32,6 +32,7 @@ Si solo quieres el diagnóstico del equipo, sin instalar nada: `python check_sys
 | Prompt, negativo, resolución (512/768/1024/personalizada), aspecto, lote, seed, steps, CFG | ✅ | — |
 | Progreso en vivo, cancelar, tiempo de generación | ✅ | — |
 | Galería: guardar, descargar, borrar, favoritos, buscar, filtrar por fecha, ver prompt y modelo | ✅ | — |
+| Upscaler con IA (Real-ESRGAN x4plus, BSD-3) | ✅ | Descarga única de ~64 MB con tu autorización, verificada con SHA-256 |
 | Upscaler, mejora de imagen y restauración (clásicos) | ✅ | Ninguno (Pillow) |
 | Mejorar prompt | ✅ | Ninguno (diccionario local ES→EN y calificadores) |
 | Image to Image, Variaciones, Inpainting, Outpainting | ✅ | Un modelo **local** instalado |
@@ -40,7 +41,8 @@ Si solo quieres el diagnóstico del equipo, sin instalar nada: `python check_sys
 | Modo de bajo consumo y liberar memoria | ✅ | — |
 
 Ten en cuenta estas limitaciones:
-- El upscaler y la restauración son **clásicos**: no inventan detalle como un modelo de IA (Real-ESRGAN o GFPGAN).
+- La restauración de fotos es **clásica**: no reconstruye caras como haría un modelo de IA (por ejemplo, GFPGAN).
+  Para ampliar con IA usa *Herramientas → Upscaler IA*.
 - El idioma de la interfaz es solo el español y el tema es solo el oscuro.
 
 ## Modelos

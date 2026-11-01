@@ -154,3 +154,9 @@ def test_outpaint_and_mask():
 def test_fit_for_diffusion():
     out = T.fit_for_diffusion(Image.new("RGB", (2000, 1000)), 768)
     assert max(out.size) <= 768 and out.width % 8 == 0
+
+
+def test_paths_follow_data_dir(tmp_path):
+    st = SettingsStore(tmp_path)
+    assert st.settings.models_path == tmp_path / "models"
+    assert st.settings.output_path == tmp_path / "outputs"

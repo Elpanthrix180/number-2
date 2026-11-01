@@ -53,11 +53,14 @@ class Settings:
     # ------------------------------------------------------------------ paths
     @property
     def output_path(self) -> Path:
-        return Path(self.output_dir) if self.output_dir else default_data_dir() / "outputs"
+        return Path(self.output_dir) if self.output_dir else self._base() / "outputs"
 
     @property
     def models_path(self) -> Path:
-        return Path(self.models_dir) if self.models_dir else default_data_dir() / "models"
+        return Path(self.models_dir) if self.models_dir else self._base() / "models"
+
+    def _base(self) -> Path:
+        return getattr(self, "_data_dir", None) or default_data_dir()
 
 
 class SettingsStore:
@@ -69,6 +72,7 @@ class SettingsStore:
         self.file = self.data_dir / "settings.json"
         self._lock = threading.Lock()
         self.settings = self._load()
+        self.settings._data_dir = self.data_dir
 
     def _load(self) -> Settings:
         if not self.file.exists():

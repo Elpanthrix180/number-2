@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from generator.prompt_enhancer import enhance_prompt
 from generator.styles import STYLES, get_style, style_names
 from models.backends import BackendUnavailable, GenRequest
 from tools import image_tools as T
+from tools import realesrgan as RE
 
 log = logging.getLogger(__name__)
 CSS_FILE = Path(__file__).with_name("theme.css")
@@ -330,7 +332,7 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                                 "**IA** necesitan un modelo local instalado (ver «Modelos IA»).")
                     local_choices = [c for c in model_choices() if c[1] != "hf-api"]
                     with gr.Tabs():
-                        with gr.Tab("Upscaler"):
+                        with gr.Tab("Upscaler clásico"):
                             gr.Markdown("Ampliación **clásica** (Lanczos + enfoque). No añade detalle inventado.")
                             up_in = gr.Image(type="pil", label="Imagen")
                             up_f = gr.Radio([2, 3, 4], value=2, label="Factor")
@@ -338,6 +340,63 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
                             up_out, up_msg = gr.Image(label="Resultado", format="png"), gr.Markdown()
                             up_btn.click(lambda im, f: classic_tool(T.upscale_classic, im, int(f), kind="upscale"),
                                          [up_in, up_f], [up_out, up_msg])
+                        with gr.Tab("Upscaler IA"):
+                            gr.Markdown(f"**Real-ESRGAN x4plus** — reconstruye detalle al ampliar. "
+                                        f"Licencia {RE.LICENSE}. Descarga única de ~{RE.MODEL_MB} MB desde el "
+                                        "repositorio oficial en GitHub, verificada con SHA-256. "
+                                        "En CPU puede tardar de segundos a varios minutos según el tamaño; con GPU es casi inmediato.")
+                            ai_stat = gr.Markdown(lambda: f"Estado: {ctx.upscaler.status()}")
+                            with gr.Row():
+                                ai_auth = gr.Checkbox(False, label=f"Autorizo descargar Real-ESRGAN (~{RE.MODEL_MB} MB)")
+                                ai_dl = gr.Button("⬇️ Descargar modelo")
+                            ai_in = gr.Image(type="pil", label="Imagen")
+                            ai_f = gr.Radio([2, 3, 4], value=4, label="Factor")
+                            with gr.Row():
+                                ai_btn = gr.Button("Ampliar con IA", variant="primary")
+                                ai_cancel = gr.Button("⛔ Cancelar")
+                            ai_prog = gr.HTML()
+                            ai_out = gr.Image(label="Resultado", format="png")
+
+                            def ai_upscale(im, f):
+                                if im is None:
+                                    yield progress_html(0, 1, "❌ Sube una imagen primero."), None
+                                    return
+                                if not ctx.upscaler.installed():
+                                    yield progress_html(0, 1, "❌ Descarga primero el modelo (arriba)."), None
+                                    return
+                                state = {"step": 0, "total": 1, "res": None, "err": None}
+                                ctx.upscale_cancel = threading.Event()
+                                t0 = time.perf_counter()
+
+                                def work():
+                                    try:
+                                        state["res"] = ctx.upscaler.upscale(
+                                            load_user_image(im), int(f),
+                                            progress=lambda a, b: state.update(step=a, total=b),
+                                            cancel=ctx.upscale_cancel)
+                                    except Exception as exc:  # noqa: BLE001
+                                        state["err"] = str(exc)
+                                th = threading.Thread(target=work, daemon=True)
+                                th.start()
+                                while th.is_alive():
+                                    yield progress_html(state["step"], state["total"],
+                                                        f"⏳ Ampliando: bloque {state['step']}/{state['total']} · "
+                                                        f"{time.perf_counter() - t0:.1f} s"), None
+                                    time.sleep(0.5)
+                                if state["err"]:
+                                    yield progress_html(0, 1, f"❌ {state['err']}"), None
+                                    return
+                                out = state["res"]
+                                secs = round(time.perf_counter() - t0, 1)
+                                rec = ctx.library.save(out, prompt="[upscale IA x%s]" % f, model="Real-ESRGAN x4plus",
+                                                       kind="upscale_ai", seconds=secs)
+                                yield progress_html(1, 1, f"✅ {out.width}×{out.height} en {secs} s · guardado #{rec.id}"), out
+
+                            ai_dl.click(lambda ok: ctx.upscaler.download(ok), ai_auth, ai_stat) \
+                                .then(lambda: False, None, ai_auth)
+                            ai_btn.click(ai_upscale, [ai_in, ai_f], [ai_prog, ai_out])
+                            ai_cancel.click(lambda: (ctx.upscale_cancel.set(), progress_html(0, 1, "⛔ Cancelando…"))[1],
+                                            None, ai_prog)
                         with gr.Tab("Enhancer"):
                             en_in = gr.Image(type="pil", label="Imagen")
                             with gr.Row():
@@ -603,7 +662,7 @@ def build_ui(ctx: AppContext) -> gr.Blocks:
 
         use_btn.click(lambda st, ex: [*show("Crear imagen"), ex, st], [ex_style, ex_prompt],
                       page_cols + [create["prompt"], create["style"]])
-        mem_btn.click(ctx.models.unload, None, mem_msg)
+        mem_btn.click(ctx.free_memory, None, mem_msg)
         demo.load(lambda m: (table(), info(m)), msel, [mtable, minfo])
     return demo
 

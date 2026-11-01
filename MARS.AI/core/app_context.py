@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from pathlib import Path
 
 from config.settings import SecretStore, SettingsStore
@@ -10,6 +11,7 @@ from database.db import Database
 from gallery.library import Library
 from generator.engine import GenerationJob
 from models.manager import ModelManager
+from tools.realesrgan import RealESRGAN
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +26,13 @@ class AppContext:
         self.library = Library(self.db, s.output_path)
         self.models = ModelManager(self.store, self.secrets, self.system)
         self.current_job: GenerationJob | None = None
+        self.upscaler = RealESRGAN(s.models_path)
+        self.upscale_cancel = threading.Event()
+
+    def free_memory(self) -> str:
+        self.models.unload()
+        self.upscaler.unload()
+        return "Memoria liberada (modelo de difusión y Real-ESRGAN)."
 
     @property
     def settings(self):

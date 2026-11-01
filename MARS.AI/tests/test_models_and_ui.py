@@ -80,3 +80,31 @@ def test_real_diffusers_pipeline(tmp_path):
                        threading.Event())
     assert imgs[0].size == (64, 64)
     be.unload()
+
+
+ESR = "/tmp/claude-0/esrm"
+
+
+def test_realesrgan_requires_authorization(tmp_path):
+    from tools.realesrgan import RealESRGAN
+    u = RealESRGAN(tmp_path)
+    assert not u.installed()
+    assert "autorización" in u.download(False)
+    assert not (tmp_path / "realesrgan").exists()
+    with pytest.raises(RuntimeError):
+        from PIL import Image
+        u.upscale(Image.new("RGB", (8, 8)))
+
+
+@pytest.mark.skipif(not os.path.isdir(ESR), reason="pesos de Real-ESRGAN no disponibles")
+def test_realesrgan_real_weights():
+    import threading
+    from PIL import Image
+    from tools.realesrgan import RealESRGAN
+    u = RealESRGAN(ESR)
+    img = Image.new("RGBA", (40, 30), (200, 50, 50, 128))
+    assert u.upscale(img, 4, tile=16).size == (160, 120)
+    assert u.upscale(img, 2).mode == "RGBA"
+    ev = threading.Event(); ev.set()
+    with pytest.raises(InterruptedError):
+        u.upscale(img, 4, cancel=ev)
