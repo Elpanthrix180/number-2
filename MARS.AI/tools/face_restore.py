@@ -20,6 +20,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from core.i18n import t
 
 log = logging.getLogger(__name__)
 
@@ -97,14 +98,14 @@ class FaceRestorer:
         ok, msg = self.deps_ready()
         if not ok:
             return f"🔴 {msg}"
-        return "🟢 Instalado" if self.installed() else f"⚪ No instalado (descarga de ~{TOTAL_MB} MB)"
+        return t("🟢 Instalado") if self.installed() else t("⚪ No instalado (descarga de ~{mb} MB)", mb=TOTAL_MB)
 
     # -------------------------------------------------------- descarga
     def download(self, authorized: bool) -> str:
         if not authorized:
-            return "⚠️ Marca la casilla de autorización antes de descargar."
+            return t("⚠️ Marca la casilla de autorización antes de descargar.")
         if self.installed():
-            return "La restauración de caras ya está instalada."
+            return t("La restauración de caras ya está instalada.")
         self.folder.mkdir(parents=True, exist_ok=True)
         for f in FILES:
             dest = self.path(f)
@@ -119,19 +120,19 @@ class FaceRestorer:
                         fh.write(chunk)
                 if sha.hexdigest() != f.sha256:
                     tmp.unlink(missing_ok=True)
-                    return f"❌ {f.name} no coincide con la huella oficial (SHA-256). Se ha descartado."
+                    return t("❌ {name} no coincide con la huella oficial (SHA-256). Se ha descartado.", name=f.name)
                 tmp.replace(dest)
             except Exception as exc:  # noqa: BLE001
                 tmp.unlink(missing_ok=True)
-                return f"❌ Error al descargar {f.name}: {type(exc).__name__}: {str(exc)[:150]}"
-        return "✅ GFPGAN y el detector de caras están instalados y verificados."
+                return t("❌ Error al descargar {name}: {err}", name=f.name, err=f"{type(exc).__name__}: {str(exc)[:150]}")
+        return t("✅ GFPGAN y el detector de caras están instalados y verificados.")
 
     # ------------------------------------------------------------ carga
     def _load(self):
         if self._net is not None:
             return self._net
         if not self.installed():
-            raise RuntimeError("La restauración de caras no está instalada. Descárgala en Herramientas → Caras IA.")
+            raise RuntimeError(t("La restauración de caras no está instalada. Descárgala en Herramientas → Caras IA."))
         import torch
 
         from tools.gfpgan_arch.gfpganv1_clean_arch import GFPGANv1Clean
@@ -190,13 +191,13 @@ class FaceRestorer:
         import torch
 
         if upscale not in (1, 2):
-            raise ValueError("La ampliación debe ser 1 o 2.")
+            raise ValueError(t("La ampliación debe ser 1 o 2."))
         if not 0.0 <= weight <= 1.0:
-            raise ValueError("La intensidad debe estar entre 0 y 1.")
+            raise ValueError(t("La intensidad debe estar entre 0 y 1."))
         alpha = img.getchannel("A") if img.mode in ("RGBA", "LA") else None
         base = img.convert("RGB")
         if max(base.size) * upscale > MAX_SIDE:
-            raise ValueError(f"El resultado superaría {MAX_SIDE}px de lado.")
+            raise ValueError(t("El resultado superaría {px}px de lado.", px=MAX_SIDE))
         if upscale == 2:
             if upscaler is not None and upscaler.installed():
                 base = upscaler.upscale(base, 2, cancel=cancel)
@@ -211,7 +212,7 @@ class FaceRestorer:
             result = rgb.astype(np.float32)
             for i, lm in enumerate(faces):
                 if cancel is not None and cancel.is_set():
-                    raise InterruptedError("Cancelado")
+                    raise InterruptedError(t("Cancelado"))
                 affine, _ = cv2.estimateAffinePartial2D(lm, TEMPLATE_512, method=cv2.LMEDS)
                 if affine is None:
                     continue

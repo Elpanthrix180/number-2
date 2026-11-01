@@ -35,16 +35,19 @@ def main() -> int:
     from core.logging_setup import setup_logging
 
     setup_logging(default_data_dir())
+    from config.settings import SLOGAN
     from core.app_context import AppContext
+    from core.i18n import t
     from interface.app import launch
 
     ctx = AppContext()
     print("=" * 60)
-    print("  MARS.AI — Transforma tu imaginación en imágenes.")
+    print(f"  MARS.AI — {t(SLOGAN)}")
     print("=" * 60)
     print(format_report(ctx.system))
-    print(f"\nImágenes : {ctx.settings.output_path}\nModelos  : {ctx.settings.models_path}")
-    print(f"\nAbre http://127.0.0.1:{args.port} si el navegador no se abre solo. Ctrl+C para salir.\n")
+    print("\n" + t("Imágenes : {path}", path=ctx.settings.output_path))
+    print(t("Modelos  : {path}", path=ctx.settings.models_path))
+    print("\n" + t("Abre http://127.0.0.1:{port} si el navegador no se abre solo. Ctrl+C para salir.", port=args.port) + "\n")
     launch(ctx, port=args.port, inbrowser=not args.no_browser)
     return 0
 

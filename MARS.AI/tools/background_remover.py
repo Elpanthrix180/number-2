@@ -18,6 +18,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageFilter
+from core.i18n import N_, t
 
 log = logging.getLogger(__name__)
 
@@ -42,10 +43,10 @@ class BGModel:
 
 
 MODELS = {
-    "rapido": BGModel("rapido", "Rápido (U²-Netp, ~4,6 MB)", "u2netp.onnx",
+    "rapido": BGModel("rapido", N_("Rápido (U²-Netp, ~4,6 MB)"), "u2netp.onnx",
                       "309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8", 4.6, 320,
                       (0.485, 0.456, 0.406), (0.229, 0.224, 0.225), "Apache 2.0 (U²-Net)"),
-    "calidad": BGModel("calidad", "Calidad (IS-Net, ~179 MB)", "isnet-general-use.onnx",
+    "calidad": BGModel("calidad", N_("Calidad (IS-Net, ~179 MB)"), "isnet-general-use.onnx",
                        "60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a", 179, 1024,
                        (0.5, 0.5, 0.5), (1.0, 1.0, 1.0), "Apache 2.0 (DIS / IS-Net)"),
 }
@@ -71,19 +72,19 @@ class BackgroundRemover:
 
     def status(self) -> str:
         if not self.deps_ready():
-            return "🔴 Falta opencv-python-headless (ejecuta install_windows.bat)"
-        parts = [f"{'🟢' if self.installed(m.id) else '⚪'} {m.label}" for m in MODELS.values()]
+            return t("🔴 Falta opencv-python-headless (ejecuta install_windows.bat)")
+        parts = [f"{'🟢' if self.installed(m.id) else '⚪'} {t(m.label)}" for m in MODELS.values()]
         return " · ".join(parts)
 
     # -------------------------------------------------------- descarga
     def download(self, model_id: str, authorized: bool) -> str:
         m = MODELS.get(model_id)
         if m is None:
-            return "❌ Modelo desconocido."
+            return t("❌ Modelo desconocido.")
         if not authorized:
-            return "⚠️ Marca la casilla de autorización antes de descargar."
+            return t("⚠️ Marca la casilla de autorización antes de descargar.")
         if self.installed(model_id):
-            return f"{m.label} ya está instalado."
+            return t("{name} ya está instalado.", name=t(m.label))
         self.folder.mkdir(parents=True, exist_ok=True)
         dest = self.path(model_id)
         tmp = dest.with_suffix(".part")
@@ -95,12 +96,12 @@ class BackgroundRemover:
                     fh.write(chunk)
             if sha.hexdigest() != m.sha256:
                 tmp.unlink(missing_ok=True)
-                return "❌ El archivo descargado no coincide con la huella oficial (SHA-256). Se ha descartado."
+                return t("❌ El archivo descargado no coincide con la huella oficial (SHA-256). Se ha descartado.")
             tmp.replace(dest)
-            return f"✅ {m.label} instalado y verificado."
+            return t("✅ {name} instalado y verificado.", name=t(m.label))
         except Exception as exc:  # noqa: BLE001
             tmp.unlink(missing_ok=True)
-            return f"❌ Error al descargar: {type(exc).__name__}: {str(exc)[:150]}"
+            return t("❌ Error al descargar: {err}", err=f"{type(exc).__name__}: {str(exc)[:150]}")
 
     def unload(self):
         with self._lock:
@@ -112,7 +113,7 @@ class BackgroundRemover:
 
         if model_id not in self._nets:
             if not self.installed(model_id):
-                raise RuntimeError(f"{MODELS[model_id].label} no está instalado. Descárgalo arriba.")
+                raise RuntimeError(t("{name} no está instalado. Descárgalo arriba.", name=t(MODELS[model_id].label)))
             self._nets[model_id] = cv2.dnn.readNetFromONNX(str(self.path(model_id)))
         return self._nets[model_id]
 
@@ -121,7 +122,7 @@ class BackgroundRemover:
         m = MODELS[model_id]
         rgb = img.convert("RGB")
         if max(rgb.size) > MAX_SIDE:
-            raise ValueError(f"Imagen demasiado grande (máx. {MAX_SIDE}px de lado).")
+            raise ValueError(t("Imagen demasiado grande (máx. {px}px de lado).", px=MAX_SIDE))
         x = np.asarray(rgb.resize((m.size, m.size), Image.LANCZOS), dtype=np.float32)
         x = x / max(float(x.max()), 1e-6)
         x = (x - np.array(m.mean, np.float32)) / np.array(m.std, np.float32)

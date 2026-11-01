@@ -17,6 +17,7 @@ from typing import Callable
 from PIL import Image
 
 from models.catalog import ModelSpec
+from core.i18n import t
 
 log = logging.getLogger(__name__)
 
@@ -216,11 +217,11 @@ class HFInferenceBackend(Backend):
 
     def generate(self, req, progress, cancel):
         if not self.token:
-            raise BackendUnavailable("Falta el token de Hugging Face. Añádelo en Configuración → APIs.")
+            raise BackendUnavailable(t("Falta el token de Hugging Face. Añádelo en Configuración → APIs."))
         try:
             from huggingface_hub import InferenceClient
         except ImportError as exc:
-            raise BackendUnavailable("Falta huggingface_hub. Ejecuta install_windows.bat.") from exc
+            raise BackendUnavailable(t("Falta huggingface_hub. Ejecuta install_windows.bat.")) from exc
         client = InferenceClient(token=self.token, timeout=180)
         images = []
         for i in range(req.num_images):
@@ -239,7 +240,7 @@ class HFInferenceBackend(Backend):
                 images.append(client.text_to_image(req.prompt, **kwargs))
             except Exception as exc:
                 # nunca mostrar cabeceras ni el token
-                raise BackendUnavailable(f"La API de Hugging Face respondió con error: {type(exc).__name__}: "
-                                         f"{str(exc)[:200]}") from None
+                raise BackendUnavailable(t("La API de Hugging Face respondió con error: {err}",
+                                           err=f"{type(exc).__name__}: {str(exc)[:200]}")) from None
         progress(req.num_images, req.num_images)
         return images

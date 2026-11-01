@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field, asdict
+from core.i18n import t
 
 
 @dataclass
@@ -143,36 +144,36 @@ def collect(path_for_disk: str = ".") -> SystemReport:
         rep.recommended_profile = "cpu-bajo-consumo"
 
     if not rep.python_ok:
-        rep.notes.append(
-            f"Python {rep.python_version}: se recomienda Python 3.10–3.13 "
-            "(PyTorch puede no tener versión para otras)."
-        )
+        rep.notes.append(t("Python {v}: se recomienda Python 3.10–3.13 (PyTorch puede no tener versión para otras).",
+                           v=rep.python_version))
     if rep.ram_total_gb and rep.ram_total_gb < 8:
-        rep.notes.append("Menos de 8 GB de RAM: usa SD 1.5 a 512×512 en modo bajo consumo, o una API externa.")
+        rep.notes.append(t("Menos de 8 GB de RAM: usa SD 1.5 a 512×512 en modo bajo consumo, o una API externa."))
     if vram == 0:
-        rep.notes.append("Sin GPU NVIDIA: la generación local funcionará en CPU (lenta: minutos por imagen).")
+        rep.notes.append(t("Sin GPU NVIDIA: la generación local funcionará en CPU (lenta: minutos por imagen)."))
     if rep.disk_free_gb < 10:
-        rep.notes.append("Menos de 10 GB libres: no habrá espacio para la mayoría de modelos locales.")
+        rep.notes.append(t("Menos de 10 GB libres: no habrá espacio para la mayoría de modelos locales."))
     return rep
 
 
 def format_report(rep: SystemReport) -> str:
-    lines = [
-        f"Sistema operativo : {rep.os_name}",
-        f"Python            : {rep.python_version} {'(OK)' if rep.python_ok else '(no recomendado)'}",
-        f"CPU (núcleos)     : {rep.cpu_count}",
-        f"RAM total         : {rep.ram_total_gb} GB (disponible {rep.ram_available_gb} GB)",
-        f"Disco libre       : {rep.disk_free_gb} GB",
+    rows = [
+        (t("Sistema operativo"), rep.os_name),
+        ("Python", f"{rep.python_version} {'(OK)' if rep.python_ok else t('(no recomendado)')}"),
+        (t("CPU (núcleos)"), rep.cpu_count),
+        (t("RAM total"), t("{total} GB (disponible {avail} GB)", total=rep.ram_total_gb, avail=rep.ram_available_gb)),
+        (t("Disco libre"), f"{rep.disk_free_gb} GB"),
     ]
     if rep.gpus:
         for g in rep.gpus:
-            vram = f"{g.vram_gb} GB VRAM" if g.vram_gb else "VRAM desconocida"
-            lines.append(f"GPU               : {g.name} — {vram} [{g.backend}]")
+            vram = f"{g.vram_gb} GB VRAM" if g.vram_gb else t("VRAM desconocida")
+            rows.append(("GPU", f"{g.name} — {vram} [{g.backend}]"))
     else:
-        lines.append("GPU               : no se detectó GPU NVIDIA")
-    lines.append(f"PyTorch           : {'instalado' if rep.torch_installed else 'no instalado'}"
-                 f"{' (CUDA activo)' if rep.torch_cuda else ''}")
-    lines.append(f"Perfil recomendado: {rep.recommended_profile}")
+        rows.append(("GPU", t("no se detectó GPU NVIDIA")))
+    rows.append(("PyTorch", (t("instalado") if rep.torch_installed else t("no instalado"))
+                 + (t(" (CUDA activo)") if rep.torch_cuda else "")))
+    rows.append((t("Perfil recomendado"), rep.recommended_profile))
+    width = max(len(k) for k, _ in rows)
+    lines = [f"{k.ljust(width)} : {v}" for k, v in rows]
     for n in rep.notes:
         lines.append(f"  • {n}")
     return "\n".join(lines)

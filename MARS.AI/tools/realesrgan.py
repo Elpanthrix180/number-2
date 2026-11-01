@@ -16,6 +16,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from core.i18n import t
 
 log = logging.getLogger(__name__)
 
@@ -98,15 +99,15 @@ class RealESRGAN:
 
     def status(self) -> str:
         if not self.torch_ready():
-            return "🔴 Falta PyTorch (ejecuta install_windows.bat)"
-        return "🟢 Instalado" if self.installed() else f"⚪ No instalado (descarga de ~{MODEL_MB} MB)"
+            return t("🔴 Falta PyTorch (ejecuta install_windows.bat)")
+        return t("🟢 Instalado") if self.installed() else t("⚪ No instalado (descarga de ~{mb} MB)", mb=MODEL_MB)
 
     # -------------------------------------------------------- descarga
     def download(self, authorized: bool) -> str:
         if not authorized:
-            return "⚠️ Marca la casilla de autorización antes de descargar."
+            return t("⚠️ Marca la casilla de autorización antes de descargar.")
         if self.installed():
-            return "Real-ESRGAN ya está instalado."
+            return t("Real-ESRGAN ya está instalado.")
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".part")
         try:
@@ -117,12 +118,12 @@ class RealESRGAN:
                     fh.write(chunk)
             if sha.hexdigest() != MODEL_SHA256:
                 tmp.unlink(missing_ok=True)
-                return "❌ El archivo descargado no coincide con la huella oficial (SHA-256). Se ha descartado."
+                return t("❌ El archivo descargado no coincide con la huella oficial (SHA-256). Se ha descartado.")
             tmp.replace(self.path)
-            return "✅ Real-ESRGAN instalado y verificado."
+            return t("✅ Real-ESRGAN instalado y verificado.")
         except Exception as exc:  # noqa: BLE001
             tmp.unlink(missing_ok=True)
-            return f"❌ Error al descargar: {type(exc).__name__}: {str(exc)[:150]}"
+            return t("❌ Error al descargar: {err}", err=f"{type(exc).__name__}: {str(exc)[:150]}")
 
     # ------------------------------------------------------------ carga
     def _load(self):
@@ -131,7 +132,7 @@ class RealESRGAN:
         if self._net is not None:
             return self._net
         if not self.installed():
-            raise RuntimeError("Real-ESRGAN no está instalado. Descárgalo en Herramientas → Upscaler IA.")
+            raise RuntimeError(t("Real-ESRGAN no está instalado. Descárgalo en Herramientas → Upscaler IA."))
         state = torch.load(self.path, map_location="cpu", weights_only=True)
         state = state.get("params_ema", state.get("params", state))
         net = _build_net()
@@ -160,9 +161,9 @@ class RealESRGAN:
         import torch
 
         if outscale not in (2, 3, 4):
-            raise ValueError("La escala debe ser 2, 3 o 4.")
+            raise ValueError(t("La escala debe ser 2, 3 o 4."))
         if max(img.size) * 4 > 8192 * 2:
-            raise ValueError("Imagen demasiado grande para ampliar (máx. 4096 px de lado).")
+            raise ValueError(t("Imagen demasiado grande para ampliar (máx. 4096 px de lado)."))
         alpha = img.getchannel("A") if img.mode in ("RGBA", "LA") else None
         rgb = np.asarray(img.convert("RGB"), dtype=np.float32) / 255.0
         h, w = rgb.shape[:2]
@@ -175,7 +176,7 @@ class RealESRGAN:
             with torch.inference_mode():
                 for i, (ty, tx) in enumerate(tiles):
                     if cancel is not None and cancel.is_set():
-                        raise InterruptedError("Cancelado")
+                        raise InterruptedError(t("Cancelado"))
                     y0, y1 = max(ty - pad, 0), min(ty + tile + pad, h)
                     x0, x1 = max(tx - pad, 0), min(tx + tile + pad, w)
                     patch = x[:, :, y0:y1, x0:x1].to(self._device, dtype)

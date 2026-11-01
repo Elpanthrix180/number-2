@@ -11,6 +11,7 @@ from PIL import Image
 
 from generator.styles import apply_style
 from models.backends import Backend, BackendUnavailable, GenerationCancelled, GenRequest
+from core.i18n import t
 
 log = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ def build_request(prompt: str, negative: str, style: str, base_res: int, aspect:
                   num_images: int, seed: int, steps: int, cfg: float, max_side: int = 1024,
                   max_batch: int = 4) -> GenRequest:
     if not prompt or not prompt.strip():
-        raise ValueError("Escribe una descripción (prompt) para generar.")
+        raise ValueError(t("Escribe una descripción (prompt) para generar."))
     p, n = apply_style(prompt, negative or "", style)
     w, h = dimensions(int(base_res), aspect, max_side)
     return GenRequest(

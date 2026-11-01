@@ -10,6 +10,7 @@ from pathlib import Path
 from PIL import Image, PngImagePlugin
 
 from database.db import Database
+from core.i18n import t
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class ImageRecord:
 
     def caption(self) -> str:
         star = "⭐ " if self.favorite else ""
-        return f"{star}#{self.id} · {self.model} · {self.created_at[:16]}"
+        return f"{star}#{self.id} · {t(self.model)} · {self.created_at[:16]}"
 
 
 class Library:
@@ -129,9 +130,9 @@ def load_user_image(path_or_img) -> Image.Image:
     else:
         p = Path(path_or_img)
         if p.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp", ".bmp"}:
-            raise ValueError("Formato no admitido. Usa PNG, JPG, WEBP o BMP.")
+            raise ValueError(t("Formato no admitido. Usa PNG, JPG, WEBP o BMP."))
         img = Image.open(p)
         img.load()
     if img.width * img.height > MAX_IMPORT_PIXELS:
-        raise ValueError("La imagen es demasiado grande.")
+        raise ValueError(t("La imagen es demasiado grande."))
     return img

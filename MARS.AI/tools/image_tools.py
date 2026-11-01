@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+from core.i18n import t
 
 MAX_UPSCALED_SIDE = 8192
 
@@ -17,10 +18,10 @@ MAX_UPSCALED_SIDE = 8192
 def upscale_classic(img: Image.Image, factor: int = 2, sharpen: bool = True) -> Image.Image:
     """Aumenta la resolución con Lanczos + enfoque. No inventa detalle (no es IA)."""
     if factor not in (2, 3, 4):
-        raise ValueError("El factor debe ser 2, 3 o 4.")
+        raise ValueError(t("El factor debe ser 2, 3 o 4."))
     w, h = img.size
     if max(w, h) * factor > MAX_UPSCALED_SIDE:
-        raise ValueError(f"El resultado superaría {MAX_UPSCALED_SIDE}px de lado.")
+        raise ValueError(t("El resultado superaría {px}px de lado.", px=MAX_UPSCALED_SIDE))
     out = img.convert("RGB").resize((w * factor, h * factor), Image.LANCZOS)
     if sharpen:
         out = out.filter(ImageFilter.UnsharpMask(radius=2, percent=80, threshold=2))
@@ -62,9 +63,9 @@ def prepare_outpaint(img: Image.Image, left: int, right: int, top: int, bottom: 
                      multiple: int = 8) -> tuple[Image.Image, Image.Image]:
     """Amplía el lienzo y crea la máscara (blanco = zona a generar)."""
     if min(left, right, top, bottom) < 0:
-        raise ValueError("Los márgenes no pueden ser negativos.")
+        raise ValueError(t("Los márgenes no pueden ser negativos."))
     if left + right + top + bottom == 0:
-        raise ValueError("Indica al menos un margen para ampliar.")
+        raise ValueError(t("Indica al menos un margen para ampliar."))
     src = img.convert("RGB")
     w = src.width + left + right
     h = src.height + top + bottom
@@ -103,7 +104,7 @@ def mask_from_editor(editor_value) -> tuple[Image.Image, Image.Image]:
 
     Lo pintado en las capas (cualquier color con alfa > 0) se convierte en blanco."""
     if not editor_value or editor_value.get("background") is None:
-        raise ValueError("Sube una imagen y pinta la zona a modificar.")
+        raise ValueError(t("Sube una imagen y pinta la zona a modificar."))
     bg = editor_value["background"]
     bg = bg if isinstance(bg, Image.Image) else Image.fromarray(np.asarray(bg))
     mask = Image.new("L", bg.size, 0)
@@ -114,5 +115,5 @@ def mask_from_editor(editor_value) -> tuple[Image.Image, Image.Image]:
             alpha = alpha.resize(bg.size)
         mask = Image.fromarray(np.maximum(np.asarray(mask), (np.asarray(alpha) > 10).astype(np.uint8) * 255))
     if not np.asarray(mask).any():
-        raise ValueError("No has pintado ninguna zona. Usa el pincel sobre lo que quieras cambiar.")
+        raise ValueError(t("No has pintado ninguna zona. Usa el pincel sobre lo que quieras cambiar."))
     return bg.convert("RGB"), mask
